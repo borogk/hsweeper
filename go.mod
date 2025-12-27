@@ -1,4 +1,4 @@
-module minesweeper
+module hsweeper
 
 go 1.25
 

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"minesweeper/game"
+	"hsweeper/game"
 	"sync"
 	"time"
 

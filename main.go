@@ -1,7 +1,7 @@
 package main
 
 import (
-	"minesweeper/ui"
+	"hsweeper/ui"
 )
 
 func main() {
