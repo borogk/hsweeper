@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -46,7 +47,11 @@ func (u *Ui) Loop() {
 		case *tcell.EventResize:
 			u.fullRefresh()
 		case *tcell.EventKey:
-			u.topView().OnInput(event.Key(), unicode.ToLower(event.Rune()))
+			if event.Key() == tcell.KeyCtrlC {
+				u.exit()
+			} else {
+				u.topView().OnInput(event.Key(), unicode.ToLower(event.Rune()))
+			}
 		}
 	}
 }
@@ -83,8 +88,15 @@ func (u *Ui) pushView(view View) {
 }
 
 func (u *Ui) popView() {
-	if len(u.views) > 1 {
-		u.views = u.views[:len(u.views)-1]
+	u.views = u.views[:len(u.views)-1]
+	if len(u.views) > 0 {
+		u.fullRefresh()
+	} else {
+		u.exit()
 	}
-	u.fullRefresh()
+}
+
+func (u *Ui) exit() {
+	u.screen.Fini()
+	os.Exit(0)
 }

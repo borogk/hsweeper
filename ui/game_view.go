@@ -19,6 +19,7 @@ type (
 
 	GameView struct {
 		ui           *Ui
+		gameFactory  func() *game.Game
 		game         *game.Game
 		cx           int
 		cy           int
@@ -27,14 +28,14 @@ type (
 	}
 )
 
-func newGameView(ui *Ui, game *game.Game) *GameView {
-	return &GameView{
-		ui:      ui,
-		game:    game,
-		cx:      game.Width() / 2,
-		cy:      game.Height() / 2,
-		effects: make([]*Effect, 0),
+func newGameView(ui *Ui, gameFactory func() *game.Game) *GameView {
+	view := &GameView{
+		ui:          ui,
+		gameFactory: gameFactory,
+		effects:     make([]*Effect, 0),
 	}
+	view.startGame()
+	return view
 }
 
 func (v *GameView) ContentSize() (width, height int) {
@@ -128,10 +129,17 @@ func (v *GameView) OnInput(key tcell.Key, rune rune) {
 			}
 		case 'f':
 			v.game.ToggleFlag(v.cx, v.cy)
-		case 'q', '?':
+		case 'q':
 			v.game.ToggleQuestion(v.cx, v.cy)
 		}
 	}
+}
+
+func (v *GameView) startGame() {
+	g := v.gameFactory()
+	v.game = g
+	v.cx = g.Width() / 2
+	v.cy = g.Height() / 2
 }
 
 func (v *GameView) statusAppearance(palette Palette) (message string, style tcell.Style, centered bool) {
@@ -214,7 +222,6 @@ func (v *GameView) actionButton() {
 	cell := v.game.Cell(v.cx, v.cy)
 	if v.game.Status() == game.StatusReady {
 		v.game.Reveal(v.cx, v.cy)
-
 	} else if v.game.Status() == game.StatusStarted {
 		if !cell.IsRevealed() {
 			v.game.ToggleFlag(v.cx, v.cy)
@@ -229,7 +236,7 @@ func (v *GameView) actionButton() {
 			v.game.Pickup(v.cx, v.cy)
 		}
 	} else {
-		v.ui.popView()
+		v.startGame()
 	}
 }
 
