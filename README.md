@@ -1,8 +1,5 @@
 ![](logo.png)
 
-> [!IMPORTANT]
-> Project is still in beta
-
 _H-Sweeper_ is a Minesweeper clone with extra lives mechanic, that runs entirely in terminal.
 Extra lives were added because it's irritating to play well, only to encounter a pure 50-50 that ruins your run.
 
@@ -11,9 +8,12 @@ Extra lives were added because it's irritating to play well, only to encounter a
 > [!IMPORTANT]
 > Requires [Go version 1.25 or newer](https://go.dev/doc/install)
 
+> [!IMPORTANT]
+> Project is still in beta
+
 Install by running in terminal:
 ```shell
-go install github.com/borogk/hsweeper@1.0.0-beta.1
+go install github.com/borogk/hsweeper@v1.0.0-beta.1
 ```
 
 After installing, simply run:
