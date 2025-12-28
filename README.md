@@ -3,9 +3,6 @@
 _H-Sweeper_ is a Minesweeper clone with extra lives mechanic, that runs entirely in terminal.
 Extra lives were added because it's irritating to play well, only to encounter a pure 50-50 that ruins your run.
 
-> [!NOTE]
-> H stands for H
-
 ### How to install
 
 > [!IMPORTANT]
@@ -26,7 +23,6 @@ hsweeper
 ### How to play
 
 You are expected to already know how to play Minesweeper.
-
 
 In case you don't know, [Minesweeper article on Wikipedia](https://en.wikipedia.org/wiki/Minesweeper_(video_game))
 does a decent job explaining. _H-Sweeper_ doesn't change rules besides adding extra lives, which is explained below.
@@ -100,6 +96,11 @@ _Action Key_ is context-sensitive, combining functions of
 
 Future support and updates are unlikely. This was originally just my personal project to learn Go programming language.
 The game is minimalistic, made with personal tastes in mind and with little to no customization options.
+
+### Final note
+
+> [!NOTE]
+> H stands for H
 
 ### Author
 
