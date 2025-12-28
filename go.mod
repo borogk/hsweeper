@@ -1,4 +1,4 @@
-module hsweeper
+module github.com/borogk/hsweeper
 
 go 1.25
 

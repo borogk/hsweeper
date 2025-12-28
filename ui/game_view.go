@@ -2,10 +2,10 @@ package ui
 
 import (
 	"fmt"
-	"hsweeper/game"
 	"sync"
 	"time"
 
+	"github.com/borogk/hsweeper/game"
 	"github.com/gdamore/tcell/v2"
 )
 

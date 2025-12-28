@@ -1,7 +1,7 @@
 package main
 
 import (
-	"hsweeper/ui"
+	"github.com/borogk/hsweeper/ui"
 )
 
 func main() {

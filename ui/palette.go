@@ -1,8 +1,7 @@
 package ui
 
 import (
-	"hsweeper/game"
-
+	"github.com/borogk/hsweeper/game"
 	"github.com/gdamore/tcell/v2"
 )
 
