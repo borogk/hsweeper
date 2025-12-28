@@ -219,7 +219,7 @@ func (v *GameView) actionButton() {
 		if !cell.IsRevealed() {
 			v.game.ToggleFlag(v.cx, v.cy)
 		} else if cell.AdjacentMines() > 0 {
-			revealResult := v.game.RevealAdjacent(v.cx, v.cy)
+			revealResult := v.game.AdvancedReveal(v.cx, v.cy)
 			if revealResult != game.RevealResultBlast {
 				v.startRevealFlashEffect()
 			} else {
