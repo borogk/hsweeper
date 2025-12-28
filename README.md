@@ -1,26 +1,35 @@
 ![](logo.png)
 
-### What is H-Sweeper?
-
-H-Sweeper is a Minesweeper clone with extra lives mechanic, that runs entirely in terminal.
+_H-Sweeper_ is a Minesweeper clone with extra lives mechanic, that runs entirely in terminal.
 Extra lives were added because it's irritating to play well, only to encounter a pure 50-50 that ruins your run.
 
 > [!NOTE]
-> H stands for H.
+> H stands for H
 
 ### How to install
 
-1. [Go 1.25 or newer](https://go.dev/doc/install) must be installed first
-2. Install `hsweeper` by running in terminal
-   ```shell
-   git clone https://github.com/borogk/hsweeper.git
-   cd hsweeper
-   go install
-   ```
-3. After installation, simply run in terminal
-   ```shell
-   hsweeper
-   ```
+> [!IMPORTANT]
+> Requires [Go version 1.25 or newer](https://go.dev/doc/install)
+
+Install by running in terminal:
+```shell
+git clone https://github.com/borogk/hsweeper.git
+cd hsweeper
+go install
+```
+
+After installing, simply run:
+```shell
+hsweeper
+```
+
+### How to play
+
+You are expected to already know how to play Minesweeper.
+
+
+In case you don't know, [Minesweeper article on Wikipedia](https://en.wikipedia.org/wiki/Minesweeper_(video_game))
+does a decent job explaining. _H-Sweeper_ doesn't change rules besides adding extra lives, which is explained below.
 
 ### Game modes
 
@@ -38,7 +47,7 @@ _Classic_ modes play exactly like the 3 modes of Windows Minesweeper with no ext
 | 4 | Classic Medium | 16 x 16                                        | 40                            | None               |
 | 5 | Classic Expert | 30 x 16                                        | 99                            | None               |
 
-### Extra lives
+### ♥ Extra lives ♥
 
 Current amount of lives is represented by `♥` symbols in the top left corner.
 
@@ -46,7 +55,7 @@ If you have more than one, revealing a bomb loses one life instead of losing the
 Exploded bomb is removed from the game and adjacent numbers are adjusted accordingly.
 
 Extra lives are not given immediately, but are rather rewarded for revealing some amount of play field.
-Only on huge game sizes (2400 cells and above) a few are granted right away. 
+Only on huge game sizes (2400 cells and above) a few are granted right away.
 
 > [!TIP]
 > Extra lives are supposed to help in absolute uncertainty! Try solving as much as you can without relying on them.
@@ -69,16 +78,8 @@ The game is controlled only with keyboard, there is no mouse support.
 
 ### Action Key
 
-Action Key has different functions depending on context.
-It combines functions of `Left Mouse`, `Right Mouse` and `Left+Right Mouse` in Windows Minesweeper,
-
-Design ideas behind it:
-
-1. Mostly play with a single button (other than moving the cursor of course).
-2. Minimize risk of losing by accident, as it puts flags on unrevealed cells, rather than revealing them.
-3. Force-revealing cells requires a more conscious decision to press separate `R` button.
-
-Possible functions:
+_Action Key_ is context-sensitive, combining functions of
+`Left-click`, `Right-click` and `Left+right-click` of Windows Minesweeper.
 
 | Condition                                                 | Function                                             |
 |-----------------------------------------------------------|------------------------------------------------------|
@@ -88,6 +89,12 @@ Possible functions:
 | On cells, where amount of adjacent `⚑` matches the number | Reveal unmarked adjacent cells (known as "chording") |
 | On cells with `♥`                                         | Pick up extra life                                   |
 | After game over                                           | Restart game                                         |
+
+> [!NOTE]
+> Design ideas behind having this control scheme:
+> 1. Mostly play with a single button (other than moving the cursor of course).
+> 2. Minimize risk of losing by accident, as it puts flags on unrevealed cells, rather than revealing them.
+> 3. Force-revealing cells requires a more conscious decision to press separate `R` button.
 
 ### Future support notice
 
