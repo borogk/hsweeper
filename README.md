@@ -43,8 +43,6 @@ hsweeper
 | `ESC`           | Quits to title menu              |
 | `CTRL-C`        | Quits the game                   |
 
-### Action Key
-
 _Action Key_ does different actions depending on context.
 In-game it combines functions of `Left-click`, `Right-click` and `Left+right-click` of Windows Minesweeper.
 
