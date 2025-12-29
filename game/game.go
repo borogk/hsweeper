@@ -179,6 +179,10 @@ func (g *Game) IsFinished() bool {
 
 // MinesRemaining indicates how many mines are left, taking flags into account.
 func (g *Game) MinesRemaining() int {
+	if g.status == StatusReady {
+		return g.minesToPlant
+	}
+
 	return g.minesLeft - g.flaggedCounter
 }
 

@@ -142,7 +142,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 		snapshot.Status = StatusReady
 		g := RestoreGame(snapshot)
 
-		assertEquals(t, g.MinesRemaining(), 0)
+		assertEquals(t, g.MinesRemaining(), 2)
 	})
 
 	t.Run("returns all planted mines after game starts", func(t *testing.T) {

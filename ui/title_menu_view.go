@@ -7,10 +7,21 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type TitleMenuView struct {
-	ui        *Ui
-	savedGame *game.Game
-}
+type (
+	TitleMenuItem struct {
+		text   string
+		style  tcell.Style
+		action func()
+		margin int
+	}
+
+	TitleMenuView struct {
+		ui        *Ui
+		savedGame *game.Game
+		items     []TitleMenuItem
+		cursor    int
+	}
+)
 
 var logo = [][]rune{
 	[]rune("██   ██  ░░░░░░  ░░      ░░  ░░░░░░  ░░░░░░  ░░░░░░  ░░░░░░  ░░░░  "),
@@ -26,6 +37,7 @@ func newTitleMenuView(ui *Ui) *TitleMenuView {
 
 func (v *TitleMenuView) OnActivate() {
 	v.savedGame = game.LoadGame(game.DefaultSavePath())
+	v.refreshMenuItems()
 }
 
 func (v *TitleMenuView) OnDeactivate() {
@@ -33,7 +45,12 @@ func (v *TitleMenuView) OnDeactivate() {
 }
 
 func (v *TitleMenuView) ContentSize() (width, height int) {
-	return len(logo[0]), len(logo) + 11
+	height = len(logo) + 2
+	for _, item := range v.items {
+		height += 1 + item.margin
+	}
+
+	return len(logo[0]), height
 }
 
 func (v *TitleMenuView) Draw(screen tcell.Screen) {
@@ -56,38 +73,33 @@ func (v *TitleMenuView) Draw(screen tcell.Screen) {
 		}
 	}
 
-	optionsX := (screenWidth - 23) / 2
-	optionsY := logoY + len(logo) + 2
-
-	defaultGameText := "[SPACE]  Quick-start"
-	defaultGameStyle := palette.DefaultGameText
-	if v.savedGame != nil {
-		defaultGameText = fmt.Sprintf(
-			"[SPACE]  Continue [♥ %d] [mines %d]",
-			v.savedGame.LivesRemaining(),
-			v.savedGame.MinesRemaining(),
-		)
-		defaultGameStyle = palette.StatusText
+	itemsX := (screenWidth - 23) / 2
+	itemsY := logoY + len(logo) + 2
+	for i, item := range v.items {
+		screen.PutStrStyled(itemsX, itemsY, item.text, item.style)
+		if i == v.cursor {
+			screen.PutStrStyled(itemsX-2, itemsY, "▶", item.style)
+		} else {
+			screen.PutStrStyled(itemsX-2, itemsY, " ", item.style)
+		}
+		itemsY += 1 + item.margin
 	}
-	screen.PutStrStyled(optionsX, optionsY, defaultGameText, defaultGameStyle)
-	screen.PutStrStyled(optionsX, optionsY+2, "  [1]    H-Expert", palette.ExpertGameText)
-	screen.PutStrStyled(optionsX, optionsY+3, "  [2]    H-Big", palette.BigGameText)
-	screen.PutStrStyled(optionsX, optionsY+4, "  [3]    Classic Easy", palette.ClassicGameText)
-	screen.PutStrStyled(optionsX, optionsY+5, "  [4]    Classic Medium", palette.ClassicGameText)
-	screen.PutStrStyled(optionsX, optionsY+6, "  [5]    Classic Expert", palette.ClassicGameText)
-	screen.PutStrStyled(optionsX, optionsY+8, " [ESC]   Exit", palette.ExitText)
 }
 
 func (v *TitleMenuView) OnInput(key tcell.Key, rune rune) {
 	switch key {
+	case tcell.KeyDown:
+		v.cursor = (v.cursor + 1) % len(v.items)
+	case tcell.KeyUp:
+		v.cursor = (v.cursor - 1 + len(v.items)) % len(v.items)
 	case tcell.KeyEscape:
 		v.ui.popView()
 	case tcell.KeyEnter:
-		v.startDefaultGame()
+		v.selectMenuItem()
 	default:
 		switch rune {
 		case ' ':
-			v.startDefaultGame()
+			v.selectMenuItem()
 		case '1':
 			v.startGame(newExpertGameFactory())
 		case '2':
@@ -102,12 +114,59 @@ func (v *TitleMenuView) OnInput(key tcell.Key, rune rune) {
 	}
 }
 
-func (v *TitleMenuView) startDefaultGame() {
+func (v *TitleMenuView) refreshMenuItems() {
+	v.items = make([]TitleMenuItem, 0, 7)
+
 	if v.savedGame != nil {
-		v.startGame(newExistingGameFactory(v.savedGame))
-	} else {
-		v.startGame(newExpertGameFactory())
+		v.items = append(v.items, TitleMenuItem{
+			text: fmt.Sprintf(
+				"Continue [♥ %d] [mines %d]",
+				v.savedGame.LivesRemaining(),
+				v.savedGame.MinesRemaining(),
+			),
+			style:  defaultPalette.StatusText,
+			action: func() { v.startGame(newExistingGameFactory(v.savedGame)) },
+			margin: 1,
+		})
 	}
+
+	v.items = append(v.items, TitleMenuItem{
+		text:   " 1   H-Expert",
+		style:  defaultPalette.ExpertGameText,
+		action: func() { v.startGame(newExpertGameFactory()) },
+	})
+	v.items = append(v.items, TitleMenuItem{
+		text:   " 2   H-Big",
+		style:  defaultPalette.BigGameText,
+		action: func() { v.startGame(v.newBigGameFactory()) },
+	})
+	v.items = append(v.items, TitleMenuItem{
+		text:   " 3   Classic Easy",
+		style:  defaultPalette.ClassicGameText,
+		action: func() { v.startGame(newClassicGameFactory(9, 9, 10)) },
+	})
+	v.items = append(v.items, TitleMenuItem{
+		text:   " 4   Classic Medium",
+		style:  defaultPalette.ClassicGameText,
+		action: func() { v.startGame(newClassicGameFactory(16, 16, 40)) },
+	})
+	v.items = append(v.items, TitleMenuItem{
+		text:   " 5   Classic Expert",
+		style:  defaultPalette.ClassicGameText,
+		action: func() { v.startGame(newClassicGameFactory(30, 16, 99)) },
+		margin: 1,
+	})
+	v.items = append(v.items, TitleMenuItem{
+		text:   "ESC  Exit",
+		style:  defaultPalette.ExitText,
+		action: func() { v.ui.popView() },
+	})
+
+	v.cursor = 0
+}
+
+func (v *TitleMenuView) selectMenuItem() {
+	v.items[v.cursor].action()
 }
 
 func (v *TitleMenuView) startGame(gameFactory GameFactory) {
