@@ -33,12 +33,12 @@ func assertBitmapEquals(t *testing.T, actual []string, expected ...string) {
 	assertEquals(t, actual, expected)
 }
 
-func (g *Game) toBitmap(bitmapFunc func(c *Cell) bool) []string {
+func (g *Game) toBitmap(predicate CellPredicate) []string {
 	result := make([]string, g.height)
 	for y := 0; y < g.height; y++ {
 		line := make([]rune, g.width)
 		for x := 0; x < g.width; x++ {
-			if bitmapFunc(g.Cell(x, y)) {
+			if predicate(g.Cell(x, y)) {
 				line[x] = 'x'
 			} else {
 				line[x] = '-'
@@ -76,24 +76,4 @@ func locationsFromBitmap(bitmap ...string) []int {
 		}
 	}
 	return locations
-}
-
-func isCellMine(c *Cell) bool {
-	return c.isMine
-}
-
-func isCellHeart(c *Cell) bool {
-	return c.isHeart
-}
-
-func isCellRevealed(c *Cell) bool {
-	return c.isRevealed
-}
-
-func isCellFlagged(c *Cell) bool {
-	return c.isFlagged
-}
-
-func isCellQuestioned(c *Cell) bool {
-	return c.isQuestioned
 }

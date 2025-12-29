@@ -1,12 +1,15 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/borogk/hsweeper/game"
 	"github.com/gdamore/tcell/v2"
 )
 
 type TitleMenuView struct {
-	ui *Ui
+	ui        *Ui
+	savedGame *game.Game
 }
 
 var logo = [][]rune{
@@ -17,12 +20,20 @@ var logo = [][]rune{
 	[]rune("██   ██  ░░░░░░    ░░  ░░    ░░░░░░  ░░░░░░  ░░      ░░░░░░  ░░  ░░"),
 }
 
-func newDifficultySelectView(ui *Ui) *TitleMenuView {
+func newTitleMenuView(ui *Ui) *TitleMenuView {
 	return &TitleMenuView{ui: ui}
 }
 
+func (v *TitleMenuView) OnActivate() {
+	v.savedGame = game.LoadGame(game.DefaultSavePath())
+}
+
+func (v *TitleMenuView) OnDeactivate() {
+
+}
+
 func (v *TitleMenuView) ContentSize() (width, height int) {
-	return len(logo[0]), len(logo) + 10
+	return len(logo[0]), len(logo) + 11
 }
 
 func (v *TitleMenuView) Draw(screen tcell.Screen) {
@@ -45,76 +56,60 @@ func (v *TitleMenuView) Draw(screen tcell.Screen) {
 		}
 	}
 
-	optionsX := logoX + 4
+	optionsX := (screenWidth - 23) / 2
 	optionsY := logoY + len(logo) + 2
 
-	screen.PutStrStyled(optionsX, optionsY, "[1] H-Expert", palette.ExpertGameText)
-	screen.PutStrStyled(optionsX, optionsY+1, "[2] H-Big", palette.BigGameText)
-	screen.PutStrStyled(optionsX, optionsY+2, "[3] Classic Easy", palette.ClassicGameText)
-	screen.PutStrStyled(optionsX, optionsY+3, "[4] Classic Medium", palette.ClassicGameText)
-	screen.PutStrStyled(optionsX, optionsY+4, "[5] Classic Expert", palette.ClassicGameText)
-
-	hint := "(press SPACE to start, 1-5 to select an option, ESC to quit)"
-	hintX := logoX + 2
-	hintY := optionsY + 6
-	screen.PutStrStyled(hintX, hintY, hint, palette.HintText)
+	defaultGameText := "[SPACE]  Quick-start"
+	defaultGameStyle := palette.DefaultGameText
+	if v.savedGame != nil {
+		defaultGameText = fmt.Sprintf(
+			"[SPACE]  Continue [♥ %d] [mines %d]",
+			v.savedGame.LivesRemaining(),
+			v.savedGame.MinesRemaining(),
+		)
+		defaultGameStyle = palette.StatusText
+	}
+	screen.PutStrStyled(optionsX, optionsY, defaultGameText, defaultGameStyle)
+	screen.PutStrStyled(optionsX, optionsY+2, "  [1]    H-Expert", palette.ExpertGameText)
+	screen.PutStrStyled(optionsX, optionsY+3, "  [2]    H-Big", palette.BigGameText)
+	screen.PutStrStyled(optionsX, optionsY+4, "  [3]    Classic Easy", palette.ClassicGameText)
+	screen.PutStrStyled(optionsX, optionsY+5, "  [4]    Classic Medium", palette.ClassicGameText)
+	screen.PutStrStyled(optionsX, optionsY+6, "  [5]    Classic Expert", palette.ClassicGameText)
+	screen.PutStrStyled(optionsX, optionsY+8, " [ESC]   Exit", palette.ExitText)
 }
 
 func (v *TitleMenuView) OnInput(key tcell.Key, rune rune) {
 	switch key {
 	case tcell.KeyEscape:
 		v.ui.popView()
+	case tcell.KeyEnter:
+		v.startDefaultGame()
 	default:
 		switch rune {
-		case '1', ' ':
-			v.startGame(newExpertGame())
+		case ' ':
+			v.startDefaultGame()
+		case '1':
+			v.startGame(newExpertGameFactory())
 		case '2':
-			v.startGame(v.newBigGame())
+			v.startGame(v.newBigGameFactory())
 		case '3':
-			v.startGame(newClassicGame(9, 9, 10))
+			v.startGame(newClassicGameFactory(9, 9, 10))
 		case '4':
-			v.startGame(newClassicGame(16, 16, 40))
+			v.startGame(newClassicGameFactory(16, 16, 40))
 		case '5':
-			v.startGame(newClassicGame(30, 16, 99))
+			v.startGame(newClassicGameFactory(30, 16, 99))
 		}
 	}
 }
 
-func (v *TitleMenuView) startGame(gameFactory func() *game.Game) {
-	v.ui.pushView(newGameView(v.ui, gameFactory))
-}
-
-func newExpertGame() func() *game.Game {
-	return func() *game.Game {
-		return game.NewGame(30, 16, 99, 1, 1)
+func (v *TitleMenuView) startDefaultGame() {
+	if v.savedGame != nil {
+		v.startGame(newExistingGameFactory(v.savedGame))
+	} else {
+		v.startGame(newExpertGameFactory())
 	}
 }
 
-func (v *TitleMenuView) newBigGame() func() *game.Game {
-	return func() *game.Game {
-		width, height := v.ui.screen.Size()
-		gameWidth := (width - 2) / 3
-		gameHeight := height - 5
-		if gameWidth < 30 {
-			gameWidth = 30
-		}
-		if gameHeight < 16 {
-			gameHeight = 16
-		}
-
-		cells := gameWidth * gameHeight
-		mines := cells / 5
-		if mines < 99 {
-			mines = 99
-		}
-		hearts := cells/480 - cells/2400
-		extraLives := cells / 2400
-		return game.NewGame(gameWidth, gameHeight, mines, hearts, 1+extraLives)
-	}
-}
-
-func newClassicGame(width, height, mines int) func() *game.Game {
-	return func() *game.Game {
-		return game.NewGame(width, height, mines, 0, 1)
-	}
+func (v *TitleMenuView) startGame(gameFactory GameFactory) {
+	v.ui.pushView(newGameView(v.ui, gameFactory, game.DefaultSavePath()))
 }

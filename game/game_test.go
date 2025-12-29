@@ -130,7 +130,7 @@ func TestGame_IsFinished(t *testing.T) {
 }
 
 func TestGame_MinesRemaining(t *testing.T) {
-	baseSnapshot := Snapshot{
+	baseSnapshot := &Snapshot{
 		Width:        3,
 		Height:       3,
 		MinesToPlant: 2,
@@ -140,7 +140,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 	t.Run("returns 0 before game starts", func(t *testing.T) {
 		snapshot := baseSnapshot
 		snapshot.Status = StatusReady
-		g := RestoreGameFromSnapshot(snapshot)
+		g := RestoreGame(snapshot)
 
 		assertEquals(t, g.MinesRemaining(), 0)
 	})
@@ -153,7 +153,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 			"---",
 			"xxx",
 		)
-		g := RestoreGameFromSnapshot(snapshot)
+		g := RestoreGame(snapshot)
 
 		assertEquals(t, g.MinesRemaining(), 3)
 	})
@@ -166,7 +166,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 			"---",
 			"xxx",
 		)
-		g := RestoreGameFromSnapshot(snapshot)
+		g := RestoreGame(snapshot)
 		g.ToggleFlag(1, 2)
 		g.ToggleFlag(2, 2)
 
@@ -205,7 +205,7 @@ func testToggleMark(
 	checkMark func(c *Cell) bool,
 	checkOtherMark func(c *Cell) bool,
 ) {
-	snapshot := Snapshot{
+	snapshot := &Snapshot{
 		Status:    StatusStarted,
 		Width:     3,
 		Height:    3,
@@ -213,7 +213,7 @@ func testToggleMark(
 	}
 
 	t.Run("adds and removes mark", func(t *testing.T) {
-		g := RestoreGameFromSnapshot(snapshot)
+		g := RestoreGame(snapshot)
 
 		beforeToggle := g.toBitmap(checkMark)
 		toggle(g, 1, 2)
@@ -253,7 +253,7 @@ func testToggleMark(
 	})
 
 	t.Run("replaces another mark", func(t *testing.T) {
-		g := RestoreGameFromSnapshot(snapshot)
+		g := RestoreGame(snapshot)
 		toggleOther(g, 1, 1)
 
 		toggle(g, 1, 1)

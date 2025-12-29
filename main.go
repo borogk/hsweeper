@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	u := ui.NewUi()
+	u := ui.NewUiWithTitleMenu()
 	u.Loop()
 }

@@ -19,8 +19,10 @@ type (
 
 	GameView struct {
 		ui           *Ui
-		gameFactory  func() *game.Game
+		gameFactory  GameFactory
 		game         *game.Game
+		autoSaver    *game.AutoSaver
+		savePath     string
 		cx           int
 		cy           int
 		effects      []*Effect
@@ -28,14 +30,23 @@ type (
 	}
 )
 
-func newGameView(ui *Ui, gameFactory func() *game.Game) *GameView {
+func newGameView(ui *Ui, gameFactory GameFactory, savePath string) *GameView {
 	view := &GameView{
 		ui:          ui,
 		gameFactory: gameFactory,
+		savePath:    savePath,
 		effects:     make([]*Effect, 0),
 	}
 	view.startGame()
 	return view
+}
+
+func (v *GameView) OnActivate() {
+
+}
+
+func (v *GameView) OnDeactivate() {
+	v.autoSaver.Finalize()
 }
 
 func (v *GameView) ContentSize() (width, height int) {
@@ -90,6 +101,8 @@ func (v *GameView) Draw(screen tcell.Screen) {
 	}
 
 	v.effectsMutex.Lock()
+	defer v.effectsMutex.Unlock()
+
 	validEffects := make([]*Effect, 0)
 	for _, effect := range v.effects {
 		if !effect.expired {
@@ -99,10 +112,11 @@ func (v *GameView) Draw(screen tcell.Screen) {
 		}
 	}
 	v.effects = validEffects
-	v.effectsMutex.Unlock()
 }
 
 func (v *GameView) OnInput(key tcell.Key, rune rune) {
+	gameActionDone := false
+
 	switch key {
 	case tcell.KeyLeft:
 		v.moveCursor(-1, 0)
@@ -114,32 +128,51 @@ func (v *GameView) OnInput(key tcell.Key, rune rune) {
 		v.moveCursor(0, 1)
 	case tcell.KeyEnter:
 		v.actionButton()
+		gameActionDone = true
 	case tcell.KeyEscape:
 		v.ui.popView()
 	case tcell.KeyDelete, tcell.KeyBackspace:
 		v.game.ClearFlagAndQuestion(v.cx, v.cy)
+		gameActionDone = true
 	default:
 		switch rune {
 		case ' ':
 			v.actionButton()
+			gameActionDone = true
 		case 'r':
 			revealResult := v.game.Reveal(v.cx, v.cy)
+			gameActionDone = true
 			if revealResult == game.RevealResultBlast {
 				v.startBlastFlashEffect()
 			}
 		case 'f':
 			v.game.ToggleFlag(v.cx, v.cy)
+			gameActionDone = true
 		case 'q':
 			v.game.ToggleQuestion(v.cx, v.cy)
+			gameActionDone = true
 		}
+	}
+
+	if gameActionDone {
+		v.autoSaver.DeferSave()
 	}
 }
 
 func (v *GameView) startGame() {
 	g := v.gameFactory()
-	v.game = g
-	v.cx = g.Width() / 2
-	v.cy = g.Height() / 2
+	if g != nil {
+		v.game = g
+		v.cx = g.Width() / 2
+		v.cy = g.Height() / 2
+
+		if v.autoSaver != nil {
+			v.autoSaver.Finalize()
+		}
+		v.autoSaver = game.NewAutoSaver(g, v.savePath)
+	} else {
+		v.ui.popView()
+	}
 }
 
 func (v *GameView) statusAppearance(palette Palette) (message string, style tcell.Style, centered bool) {

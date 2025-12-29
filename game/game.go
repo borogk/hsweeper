@@ -2,6 +2,7 @@ package game
 
 import (
 	"math/rand"
+	"sync"
 )
 
 // Game encapsulates a game of hsweeper with its entire logic.
@@ -19,6 +20,7 @@ type Game struct {
 	flaggedCounter      int
 	heartSpawnCounter   int
 	heartSpawnThreshold int
+	sync.Mutex
 }
 
 // NewGame creates a new game with desired parameters.
@@ -57,9 +59,9 @@ func NewGame(width, height, minesToPlant, heartsToPlant, livesLeft int) *Game {
 	}
 }
 
-// RestoreGameFromSnapshot creates a game and restores it to the state as told by provided snapshot.
+// RestoreGame creates a game and restores it to the state as told by provided snapshot.
 // Prioritizes creating a playable game with consistent state over being 100% faithful to the snapshot parameters.
-func RestoreGameFromSnapshot(snapshot Snapshot) *Game {
+func RestoreGame(snapshot *Snapshot) *Game {
 	game := NewGame(snapshot.Width, snapshot.Height, snapshot.MinesToPlant, snapshot.HeartsToPlant, snapshot.LivesLeft)
 
 	// Ignore the rest of snapshot parameters if the game wasn't supposed to start yet
@@ -80,7 +82,7 @@ func RestoreGameFromSnapshot(snapshot Snapshot) *Game {
 		cell := &game.cells[i]
 		if !cell.isRevealed && !cell.isMine {
 			cell.isRevealed = true
-			game.unrevealedCounter++
+			game.unrevealedCounter--
 
 			// Keep track of heart spawn stats
 			if cell.adjacentMines == 0 {
@@ -116,6 +118,27 @@ func RestoreGameFromSnapshot(snapshot Snapshot) *Game {
 	}
 
 	return game
+}
+
+// Save captures current game state into a snapshot.
+func (g *Game) Save() *Snapshot {
+	g.Lock()
+	defer g.Unlock()
+
+	return &Snapshot{
+		Status:                    g.status,
+		Width:                     g.width,
+		Height:                    g.height,
+		MinesToPlant:              g.minesToPlant,
+		HeartsToPlant:             g.heartsToPlant,
+		LivesLeft:                 g.livesLeft,
+		HeartsLeft:                g.heartsLeft,
+		MineLocations:             g.collectLocationsForSnapshot(isCellMine),
+		RevealedLocations:         g.collectLocationsForSnapshot(isCellRevealed),
+		UncollectedHeartLocations: g.collectLocationsForSnapshot(isCellHeart),
+		FlaggedLocations:          g.collectLocationsForSnapshot(isCellFlagged),
+		QuestionedLocations:       g.collectLocationsForSnapshot(isCellHeart),
+	}
 }
 
 // Status returns game status
@@ -166,6 +189,9 @@ func (g *Game) LivesRemaining() int {
 
 // ToggleFlag toggles flagged state of a cell, removes question.
 func (g *Game) ToggleFlag(x, y int) {
+	g.Lock()
+	defer g.Unlock()
+
 	if g.IsFinished() {
 		return
 	}
@@ -184,6 +210,9 @@ func (g *Game) ToggleFlag(x, y int) {
 
 // ToggleQuestion toggles questioned state of a cell, removes flag.
 func (g *Game) ToggleQuestion(x, y int) {
+	g.Lock()
+	defer g.Unlock()
+
 	if g.IsFinished() {
 		return
 	}
@@ -200,6 +229,9 @@ func (g *Game) ToggleQuestion(x, y int) {
 
 // ClearFlagAndQuestion clears all markings on a cell.
 func (g *Game) ClearFlagAndQuestion(x, y int) {
+	g.Lock()
+	defer g.Unlock()
+
 	if g.IsFinished() {
 		return
 	}
@@ -214,6 +246,9 @@ func (g *Game) ClearFlagAndQuestion(x, y int) {
 
 // Pickup collects a heart if there is one.
 func (g *Game) Pickup(x, y int) {
+	g.Lock()
+	defer g.Unlock()
+
 	if g.IsFinished() {
 		return
 	}
@@ -228,6 +263,13 @@ func (g *Game) Pickup(x, y int) {
 // Reveal reveals a cell, advancing the game forward.
 // Recursively propagates over cells with 0 adjacent mines.
 func (g *Game) Reveal(x, y int) RevealResult {
+	g.Lock()
+	defer g.Unlock()
+	return g.revealInner(x, y)
+}
+
+// Inner implementation of Reveal, extracted to avoid locking twice on recursion.
+func (g *Game) revealInner(x, y int) RevealResult {
 	cell := g.Cell(x, y)
 
 	// Only allow unrevealed and unmarked cells
@@ -242,11 +284,13 @@ func (g *Game) Reveal(x, y int) RevealResult {
 	}
 
 	// Mark as revealed
+	result := RevealResultRevealed
 	cell.isRevealed = true
 	g.unrevealedCounter--
 
 	// Check if we hit a mine
 	if cell.isMine {
+		result = RevealResultBlast
 		g.livesLeft--
 
 		if g.livesLeft > 0 {
@@ -260,14 +304,12 @@ func (g *Game) Reveal(x, y int) RevealResult {
 			// No lives left, declare loss
 			g.status = StatusLost
 		}
-
-		return RevealResultBlast
 	}
 
 	if cell.adjacentMines == 0 {
 		// When all adjacent cells are free of mines - reveal them all
 		for _, offset := range adjacentOffsets {
-			g.Reveal(x+offset.x, y+offset.y)
+			g.revealInner(x+offset.x, y+offset.y)
 		}
 
 		// Check if it is time to spawn a heart
@@ -283,11 +325,14 @@ func (g *Game) Reveal(x, y int) RevealResult {
 		g.status = StatusWon
 	}
 
-	return RevealResultRevealed
+	return result
 }
 
 // AdvancedReveal reveals adjacent cells after exact amount of them were flagged.
 func (g *Game) AdvancedReveal(x, y int) RevealResult {
+	g.Lock()
+	defer g.Unlock()
+
 	cell := g.Cell(x, y)
 
 	// Only allow revealed numbered cells
@@ -307,14 +352,43 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 	}
 
 	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
+	// If any were revealed - combined result would be at least revealed, if any blasted - blast
 	result := RevealResultBlocked
 	for _, offset := range adjacentOffsets {
-		subResult := g.Reveal(x+offset.x, y+offset.y)
+		subResult := g.revealInner(x+offset.x, y+offset.y)
 		if subResult > result {
 			result = subResult
 		}
 	}
+
+	// Blast means the adjacent flags were incorrect, remove them for safety
+	if result == RevealResultBlast {
+		for _, offset := range adjacentOffsets {
+			adjacentCell := g.Cell(x+offset.x, y+offset.y)
+			if adjacentCell.isFlagged {
+				adjacentCell.isFlagged = false
+				g.flaggedCounter--
+			}
+		}
+	}
+
 	return result
+}
+
+// Collects list of indices of cells matching specified predicate.
+func (g *Game) collectLocationsForSnapshot(predicate CellPredicate) []int {
+	locations := make([]int, 0)
+	for i, cell := range g.cells {
+		if predicate(&cell) {
+			locations = append(locations, i)
+		}
+	}
+
+	if len(locations) > 0 {
+		return locations
+	}
+
+	return nil
 }
 
 // Generates random mine locations, excluding 3x3 square around provided coordinates.

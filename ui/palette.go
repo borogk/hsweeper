@@ -7,12 +7,14 @@ import (
 
 type Palette struct {
 	Blank                 tcell.Style
+	PlainText             tcell.Style
 	Logo                  tcell.Style
 	LogoSecondary         tcell.Style
-	HintText              tcell.Style
+	DefaultGameText       tcell.Style
 	ExpertGameText        tcell.Style
 	BigGameText           tcell.Style
 	ClassicGameText       tcell.Style
+	ExitText              tcell.Style
 	Border                tcell.Style
 	ReadyText             tcell.Style
 	StatusText            tcell.Style
@@ -47,12 +49,14 @@ func styleWithBackground(foreground, background uint64) tcell.Style {
 
 var defaultPalette = Palette{
 	Blank:                 style(blankColor),
+	PlainText:             style(0xFFFFFF),
 	Logo:                  styleWithBackground(blankColor, 0xCC1C45),
 	LogoSecondary:         styleWithBackground(blankColor, 0x274FBC),
-	HintText:              style(0xB3B3B3),
-	ExpertGameText:        style(0xFFA000),
-	BigGameText:           style(0xFF0000),
-	ClassicGameText:       style(0xD0D0FF),
+	DefaultGameText:       style(0x90EE90),
+	ExpertGameText:        style(0xFFFF00),
+	BigGameText:           style(0xFFA000),
+	ClassicGameText:       style(0xB0B0FF),
+	ExitText:              style(0xB3B3B3),
 	Border:                style(0x352D66),
 	ReadyText:             style(0xD3D3D3),
 	StatusText:            style(0xFF0000),
