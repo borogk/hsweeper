@@ -14,37 +14,71 @@ Extra lives were added because it's irritating to play well, only to encounter a
 > Project is still in beta
 
 Install by running in terminal:
+
 ```shell
 go install github.com/borogk/hsweeper@v1.0.0-beta.1
 ```
 
 After installing, simply run:
+
 ```shell
 hsweeper
 ```
 
 ### How to play
 
-You are expected to already know how to play Minesweeper.
+> [!NOTE]
+> You are expected to already know the rules of Minesweeper.
+> In case you don't, [this article](https://en.wikipedia.org/wiki/Minesweeper_(video_game))
+> does a decent job explaining.
 
-In case you don't know, [Minesweeper article on Wikipedia](https://en.wikipedia.org/wiki/Minesweeper_(video_game))
-does a decent job explaining. _H-Sweeper_ doesn't change rules besides adding extra lives, which is explained below.
+| Key             | Function                         |
+|-----------------|----------------------------------|
+| `←` `→` `↑` `↓` | Move the cursor                  |
+| `SPACE` `↵`     | _Action Key_ (explained below)   |
+| `R`             | Reveal cell (must not be marked) |
+| `F`             | Toggle flag mark `⚑`             |
+| `Q`             | Toggle question mark `?`         |
+| `DELETE` `⌫`    | Clear `⚑` or `?`                 |
+| `ESC`           | Quits to title menu              |
+| `CTRL-C`        | Quits the game                   |
+
+### Action Key
+
+_Action Key_ does different actions depending on context.
+In-game it combines functions of `Left-click`, `Right-click` and `Left+right-click` of Windows Minesweeper.
+
+| Condition                                                 | Function                                             |
+|-----------------------------------------------------------|------------------------------------------------------|
+| In title menu                                             | Select current option                                |
+| First move of a game                                      | Reveal around the cursor and start for real          |
+| On unrevealed cell                                        | Toggle `⚑`                                           |
+| On cells, where amount of adjacent `⚑` matches the number | Reveal unmarked adjacent cells (known as "chording") |
+| On cells with `♥`                                         | Pick up extra life                                   |
+| After game over                                           | Restart game                                         |
+
+> [!NOTE]
+> Design ideas behind having such a control scheme:
+> 1. Advancing the game is done with a single button mostly (other than moving the cursor of course).
+> 2. Risk of losing by accident is minimized, as unrevealed cells are flagged rather than revealed.
+> 3. Force-revealing cells requires a more conscious decision to press separate `R` button.
 
 ### Game modes
 
-Default game mode is _H-Expert_, which plays the same as regular Minesweeper Expert mode, but with one extra life.
+_H-Expert_ is the default game mode. It plays exactly like regular Minesweeper Expert mode, but with +1 extra life.
 
-_H-Big_ extends _H-Expert_ by having a bigger playing field and giving ever more extra lives to compensate.
+_H-Big_ stretches to fit the entire screen, having more mines and extra lives to compensate.
+Cannot be smaller than Expert.
 
 _Classic_ modes play exactly like the 3 modes of Windows Minesweeper with no extra lives.
 
-| # | Mode           | Size                                           | Mines                         | Extra lives        |
-|---|----------------|------------------------------------------------|-------------------------------|--------------------|
-| 1 | H-Expert       | 30 x 16                                        | 99                            | +1                 |
-| 2 | H-Big          | Fits entire terminal window (at least 30 x 16) | 1 every 5 cells (at least 99) | +1 every 480 cells |
-| 3 | Classic Easy   | 9 x 9                                          | 10                            | None               |
-| 4 | Classic Medium | 16 x 16                                        | 40                            | None               |
-| 5 | Classic Expert | 30 x 16                                        | 99                            | None               |
+| # | Mode           | Size    | Mines           | Extra lives        |
+|---|----------------|---------|-----------------|--------------------|
+| 1 | H-Expert       | 30 x 16 | 99              | +1                 |
+| 2 | H-Big          | Dynamic | 1 every 5 cells | +1 every 480 cells |
+| 3 | Classic Easy   | 9 x 9   | 10              | None               |
+| 4 | Classic Medium | 16 x 16 | 40              | None               |
+| 5 | Classic Expert | 30 x 16 | 99              | None               |
 
 ### ♥ Extra lives ♥
 
@@ -58,42 +92,6 @@ Only on huge game sizes (2400 cells and above) a few are granted right away.
 
 > [!TIP]
 > Extra lives are supposed to help in absolute uncertainty! Try solving as much as you can without relying on them.
-
-### Controls
-
-The game is controlled only with keyboard, there is no mouse support.
-
-| Key                 | Function                                               |
-|---------------------|--------------------------------------------------------|
-| `1` `2` `3` `4` `5` | Select title menu option                               |
-| `←` `→` `↑` `↓`     | Move the cursor                                        |
-| `SPACE` `↵`         | _Action Key_ (explained below)                         |
-| `R`                 | Reveal cell (must not be marked)                       |
-| `F`                 | Toggle flag mark `⚑`                                   |
-| `Q`                 | Toggle question mark `?`                               |
-| `DELETE` `⌫`        | Clear `⚑` or `?`                                       |
-| `ESC`               | Quits to title menu (if already there, quits the game) |
-| `CTRL-C`            | Quits the game                                         |
-
-### Action Key
-
-_Action Key_ is context-sensitive, combining functions of
-`Left-click`, `Right-click` and `Left+right-click` of Windows Minesweeper.
-
-| Condition                                                 | Function                                             |
-|-----------------------------------------------------------|------------------------------------------------------|
-| In title menu                                             | Start new H-Expert game                              |
-| First move of a game                                      | Reveal around the cursor and start for real          |
-| On unrevealed cell                                        | Toggle `⚑`                                           |
-| On cells, where amount of adjacent `⚑` matches the number | Reveal unmarked adjacent cells (known as "chording") |
-| On cells with `♥`                                         | Pick up extra life                                   |
-| After game over                                           | Restart game                                         |
-
-> [!NOTE]
-> Design ideas behind having this control scheme:
-> 1. Mostly play with a single button (other than moving the cursor of course).
-> 2. Minimize risk of losing by accident, as it puts flags on unrevealed cells, rather than revealing them.
-> 3. Force-revealing cells requires a more conscious decision to press separate `R` button.
 
 ### Future support notice
 
