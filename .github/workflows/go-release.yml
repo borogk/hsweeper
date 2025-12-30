@@ -23,9 +23,9 @@ jobs:
       with:
         name: 'hsweeper-${{ github.ref_name }}-windows-amd64.zip'
         path: |
-          'hsweeper.exe'
-          'LICENSE'
-          'LICENSE-THIRD-PARTY'
+          ./hsweeper.exe
+          ./LICENSE
+          ./LICENSE-THIRD-PARTY
 
   build-linux:
     name: Linux
@@ -46,9 +46,9 @@ jobs:
         with:
           name: 'hsweeper-${{ github.ref_name }}-linux-amd64.zip'
           path: |
-            'hsweeper'
-            'LICENSE'
-            'LICENSE-THIRD-PARTY'
+            ./hsweeper
+            ./LICENSE
+            ./LICENSE-THIRD-PARTY
 
   build-macos:
     name: macOS
@@ -69,6 +69,6 @@ jobs:
         with:
           name: 'hsweeper-${{ github.ref_name }}-macos-arm64.zip'
           path: |
-            'hsweeper'
-            'LICENSE'
-            'LICENSE-THIRD-PARTY'
+            ./hsweeper
+            ./LICENSE
+            ./LICENSE-THIRD-PARTY
