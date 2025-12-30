@@ -6,16 +6,38 @@ _H-Sweeper_ is a Minesweeper clone with extra lives feature, that runs entirely 
 
 ### Downloads
 
+> [!WARNING]
+> Binaries listed below are unsigned and might trigger a security warning. Recommended way to avoid this is to install from source code.
+
 | File name                                                                                                                                               | Platform    |
 |---------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
 | [hsweeper-v1.0.0-beta.3-windows-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-windows-amd64.zip) | Windows x64 |
 | [hsweeper-v1.0.0-beta.3-linux-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-linux-amd64.zip)     | Linux x64   |
 | [hsweeper-v1.0.0-beta.3-macos-arm64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-macos-arm64.zip)     | macOS ARM64 |
 
-Alternatively, you can install from sources (requires [Go 1.25](https://go.dev/doc/install)):
+### How to install from source code
+
+> [!NOTE]
+> Requires [Go 1.25](https://go.dev/doc/install)
+
+Simply run the following command, it automatically fetches the sources and builds locally:
 
 ```shell
 go install github.com/borogk/hsweeper@v1.0.0-beta.3
+```
+
+Alternatively, clone the repo and build directly from the project directory:
+
+```shell
+git clone https://github.com/borogk/hsweeper.git
+cd hsweeper
+go install
+```
+
+If you're not sure where the built binary goes - this command provides an explanation:
+
+```shell
+go help install
 ```
 
 ### How to play
@@ -95,3 +117,4 @@ The game is minimalistic, made with personal tastes in mind and with little to n
 ### Author
 
 Originally created by **borogk** in 2025.
+
