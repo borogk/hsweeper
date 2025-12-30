@@ -60,7 +60,7 @@ func TestNewGame(t *testing.T) {
 	})
 }
 
-func TestGame_RestoreSave(t *testing.T) {
+func TestRestoreGame_And_Save(t *testing.T) {
 	snapshot := &Snapshot{
 		Status:        StatusStarted,
 		Width:         6,
@@ -182,7 +182,7 @@ func TestGame_RestoreSave(t *testing.T) {
 		assertEquals(t, save.QuestionedLocations, []int{20, 21})
 	})
 
-	t.Run("save-restore-save again produce two identical snapshots", func(t *testing.T) {
+	t.Run("Save-Restore-Save produce two identical snapshots", func(t *testing.T) {
 		firstSave := RestoreGame(snapshot).Save()
 		secondSave := RestoreGame(firstSave).Save()
 		assertEquals(t, firstSave, secondSave)
@@ -765,4 +765,198 @@ func TestGame_Pickup(t *testing.T) {
 	}
 }
 
-// TODO: test other functions
+func TestGame_Reveal(t *testing.T) {
+	snapshot := &Snapshot{
+		Status:        StatusStarted,
+		Width:         10,
+		Height:        10,
+		MinesToPlant:  20,
+		HeartsToPlant: 2,
+		LivesLeft:     2,
+		HeartsLeft:    2,
+		MineLocations: locationsFromBitmap(
+			"----------",
+			"-x-----xx-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		),
+		RevealedLocations: locationsFromBitmap(
+			"x---------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+		),
+	}
+
+	t.Run("Reveal opens single or multiple cells, doesn't lose lives and continues the game", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		// Top right uncovers only one
+		assertEquals(t, g.Reveal(9, 0), RevealResultRevealed)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.unrevealedCounter, 98)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"x--------x",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+		)
+
+		// Bottom left uncovers a few
+		assertEquals(t, g.Reveal(0, 9), RevealResultRevealed)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.unrevealedCounter, 79)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"x--------x",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"----------",
+			"--xxxxx---",
+			"xxxxxxx---",
+			"xxxxxxx---",
+		)
+
+		// Middle uncovers most of the rest
+		assertEquals(t, g.Reveal(6, 5), RevealResultRevealed)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.unrevealedCounter, 38)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"x-xxxxx--x",
+			"--xxxxx---",
+			"--xxxxxxxx",
+			"----xxxxxx",
+			"----xxxxxx",
+			"----xxxxxx",
+			"-----xxxxx",
+			"--xxxxx---",
+			"xxxxxxx---",
+			"xxxxxxx---",
+		)
+
+		// Surrounded
+		assertEquals(t, g.Reveal(8, 8), RevealResultRevealed)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.unrevealedCounter, 37)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"x-xxxxx--x",
+			"--xxxxx---",
+			"--xxxxxxxx",
+			"----xxxxxx",
+			"----xxxxxx",
+			"----xxxxxx",
+			"-----xxxxx",
+			"--xxxxx---",
+			"xxxxxxx-x-",
+			"xxxxxxx---",
+		)
+	})
+
+	t.Run("Reveal loses a live, removes a mine and adjusts cell numbers", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.Reveal(1, 1), RevealResultBlast)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.livesLeft, 1)
+		assertEquals(t, g.minesLeft, 19)
+		assertBitmapEquals(t, g.toBitmap(isCellMine),
+			"----------",
+			"-------xx-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		)
+		assertBitmapEquals(t, g.toNumbersMap(),
+			"0000001221",
+			"0000001111",
+			"1232101221",
+			"1132200000",
+			"1242200000",
+			"1244310000",
+			"2232111232",
+			"2243212242",
+			"1110003484",
+			"0000002242",
+		)
+	})
+
+	t.Run("Reveal loses the last live, doesn't remove the last mine and loses the game", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.Reveal(1, 1), RevealResultBlast)
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.Reveal(8, 1), RevealResultBlast)
+		assertEquals(t, g.status, StatusLost)
+		assertEquals(t, g.livesLeft, 0)
+		assertEquals(t, g.minesLeft, 19)
+		assertBitmapEquals(t, g.toBitmap(isCellMine),
+			"----------",
+			"-------xx-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		)
+		assertBitmapEquals(t, g.toNumbersMap(),
+			"0000001221",
+			"0000001111",
+			"1232101221",
+			"1132200000",
+			"1242200000",
+			"1244310000",
+			"2232111232",
+			"2243212242",
+			"1110003484",
+			"0000002242",
+		)
+	})
+
+	// TODO: test revealing enough wins
+	// TODO: test reveal propagation on blast
+	// TODO: test hearts spawning
+	// TODO: test does nothing on flags
+	// TODO: test does nothing on question marks
+	// TODO: test does nothing on lost game
+}
+
+func TestGame_AdvancedReveal(t *testing.T) {
+	// TODO: test reveal with various numbers
+	// TODO: test removes flags on blast
+	// TODO: test reveal propagation on blast
+	// TODO: test revealing enough wins
+	// TODO: test does nothing on unrevealed
+	// TODO: test does nothing on revealed with 0 adjacent
+}
