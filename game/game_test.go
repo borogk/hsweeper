@@ -685,4 +685,84 @@ func TestGame_ClearFlagAndQuestion(t *testing.T) {
 	}
 }
 
+func TestGame_Pickup(t *testing.T) {
+	snapshot := &Snapshot{
+		Status:    StatusStarted,
+		Width:     3,
+		Height:    3,
+		LivesLeft: 1,
+		RevealedLocations: locationsFromBitmap(
+			"xx-",
+			"---",
+			"---",
+		),
+		UncollectedHeartLocations: locationsFromBitmap(
+			"xx-",
+			"---",
+			"---",
+		),
+	}
+
+	t.Run("picks up extra lives", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.Pickup(0, 0)
+		heartsAfterPickedOne := g.toBitmap(isCellHeart)
+		livesAfterPickedOne := g.livesLeft
+		g.Pickup(1, 0)
+		heartsAfterPickedBoth := g.toBitmap(isCellHeart)
+		livesAfterPickedBoth := g.livesLeft
+
+		assertBitmapEquals(t, heartsAfterPickedOne,
+			"-x-",
+			"---",
+			"---",
+		)
+		assertBitmapEquals(t, heartsAfterPickedBoth,
+			"---",
+			"---",
+			"---",
+		)
+		assertEquals(t, livesAfterPickedOne, 2)
+		assertEquals(t, livesAfterPickedBoth, 3)
+	})
+
+	t.Run("does nothing on cells without hearts", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.Pickup(1, 1)
+		heartsAfterPicked := g.toBitmap(isCellHeart)
+		livesAfterPicked := g.livesLeft
+
+		assertBitmapEquals(t, heartsAfterPicked,
+			"xx-",
+			"---",
+			"---",
+		)
+		assertEquals(t, livesAfterPicked, 1)
+	})
+
+	for _, status := range []Status{StatusLost, StatusWon} {
+		t.Run("does nothing on finished game", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+			g.status = status
+
+			for x := 0; x < 3; x++ {
+				for y := 0; y < 3; y++ {
+					g.Pickup(x, y)
+				}
+			}
+			heartsAfterPickedAll := g.toBitmap(isCellHeart)
+			livesAfterPickedAll := g.livesLeft
+
+			assertBitmapEquals(t, heartsAfterPickedAll,
+				"xx-",
+				"---",
+				"---",
+			)
+			assertEquals(t, livesAfterPickedAll, 1)
+		})
+	}
+}
+
 // TODO: test other functions
