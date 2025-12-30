@@ -11,11 +11,17 @@ import (
 type (
 	// View implementations are responsible for (almost) the entire screen input and graphics.
 	View interface {
+		// OnActivate is called when the view becomes visible (may happen multiple times).
 		OnActivate()
+		// OnDeactivate is called when the view is popped from UI stack.
 		OnDeactivate()
-		ContentSize() (width, height int)
-		Draw(screen tcell.Screen)
+		// OnInput is called on key press. Special keys and printable symbols are handled in separate parameters.
 		OnInput(key tcell.Key, rune rune)
+		// ContentSize must accurately return how much space the view requires.
+		// It's needed to properly center content in terminal, as well as to warn when the terminal is too small.
+		ContentSize() (width, height int)
+		// Draw updates the view's graphics.
+		Draw(screen tcell.Screen)
 	}
 
 	// Ui encapsulates all game graphics and input.
@@ -51,9 +57,11 @@ func (u *Ui) Loop() {
 		u.refresh()
 		switch event := u.screen.PollEvent().(type) {
 		case *tcell.EventResize:
+			// Resizing terminal requires full refresh to look properly.
 			u.fullRefresh()
 		case *tcell.EventKey:
 			if event.Key() == tcell.KeyCtrlC {
+				// Ctrl-C is the only key command to handle globally.
 				u.exit()
 			} else {
 				u.topView().OnInput(event.Key(), unicode.ToLower(event.Rune()))

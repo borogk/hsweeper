@@ -8,13 +8,15 @@ import (
 )
 
 type (
+	// TitleMenuItem represents a menu item with its action and appearance.
 	TitleMenuItem struct {
+		action func()
 		text   string
 		style  tcell.Style
-		action func()
 		margin int
 	}
 
+	// TitleMenuView is responsible for title menu input and graphics.
 	TitleMenuView struct {
 		ui        *Ui
 		savedGame *game.Game
@@ -23,6 +25,7 @@ type (
 	}
 )
 
+// The symbols from this logo are not put directly into terminal, but interpreted as colored text cell backgrounds.
 var logo = [][]rune{
 	[]rune("██   ██  ░░░░░░  ░░      ░░  ░░░░░░  ░░░░░░  ░░░░░░  ░░░░░░  ░░░░  "),
 	[]rune("██   ██  ░░      ░░      ░░  ░░      ░░      ░░  ░░  ░░      ░░  ░░"),
@@ -36,12 +39,41 @@ func newTitleMenuView(ui *Ui) *TitleMenuView {
 }
 
 func (v *TitleMenuView) OnActivate() {
+	// Preload the auto-save each time menu is activated
 	v.savedGame = game.LoadGame(game.DefaultSavePath())
 	v.refreshMenuItems()
 }
 
 func (v *TitleMenuView) OnDeactivate() {
 
+}
+
+func (v *TitleMenuView) OnInput(key tcell.Key, rune rune) {
+	switch key {
+	case tcell.KeyDown:
+		v.cursor = (v.cursor + 1) % len(v.items)
+	case tcell.KeyUp:
+		v.cursor = (v.cursor - 1 + len(v.items)) % len(v.items)
+	case tcell.KeyEscape:
+		v.ui.popView()
+	case tcell.KeyEnter:
+		v.selectMenuItem()
+	default:
+		switch rune {
+		case ' ':
+			v.selectMenuItem()
+		case '1':
+			v.startGame(newExpertGameFactory())
+		case '2':
+			v.startGame(v.newBigGameFactory())
+		case '3':
+			v.startGame(newClassicGameFactory(9, 9, 10))
+		case '4':
+			v.startGame(newClassicGameFactory(16, 16, 40))
+		case '5':
+			v.startGame(newClassicGameFactory(30, 16, 99))
+		}
+	}
 }
 
 func (v *TitleMenuView) ContentSize() (width, height int) {
@@ -83,34 +115,6 @@ func (v *TitleMenuView) Draw(screen tcell.Screen) {
 			screen.PutStrStyled(itemsX-2, itemsY, " ", item.style)
 		}
 		itemsY += 1 + item.margin
-	}
-}
-
-func (v *TitleMenuView) OnInput(key tcell.Key, rune rune) {
-	switch key {
-	case tcell.KeyDown:
-		v.cursor = (v.cursor + 1) % len(v.items)
-	case tcell.KeyUp:
-		v.cursor = (v.cursor - 1 + len(v.items)) % len(v.items)
-	case tcell.KeyEscape:
-		v.ui.popView()
-	case tcell.KeyEnter:
-		v.selectMenuItem()
-	default:
-		switch rune {
-		case ' ':
-			v.selectMenuItem()
-		case '1':
-			v.startGame(newExpertGameFactory())
-		case '2':
-			v.startGame(v.newBigGameFactory())
-		case '3':
-			v.startGame(newClassicGameFactory(9, 9, 10))
-		case '4':
-			v.startGame(newClassicGameFactory(16, 16, 40))
-		case '5':
-			v.startGame(newClassicGameFactory(30, 16, 99))
-		}
 	}
 }
 

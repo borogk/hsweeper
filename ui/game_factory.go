@@ -4,8 +4,11 @@ import (
 	"github.com/borogk/hsweeper/game"
 )
 
+// GameFactory repeatedly creates new game instances to facilitate restarts.
+// May return nil, which means restarting the game is impossible.
 type GameFactory func() *game.Game
 
+// Special game factory, that returns an existing game only once.
 func newExistingGameFactory(g *game.Game) GameFactory {
 	once := true
 	return func() *game.Game {
@@ -18,12 +21,14 @@ func newExistingGameFactory(g *game.Game) GameFactory {
 	}
 }
 
+// H-Expert game factory.
 func newExpertGameFactory() GameFactory {
 	return func() *game.Game {
 		return game.NewGame(30, 16, 99, 1, 1)
 	}
 }
 
+// H-Big game factory.
 func (v *TitleMenuView) newBigGameFactory() GameFactory {
 	return func() *game.Game {
 		width, height := v.ui.screen.Size()
@@ -47,6 +52,7 @@ func (v *TitleMenuView) newBigGameFactory() GameFactory {
 	}
 }
 
+// Classic game factory.
 func newClassicGameFactory(width, height, mines int) GameFactory {
 	return func() *game.Game {
 		return game.NewGame(width, height, mines, 0, 1)

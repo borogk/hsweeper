@@ -1,6 +1,6 @@
 package game
 
-// Cell represents a single game cell
+// Cell represents a single game cell.
 type Cell struct {
 	isMine        bool
 	isHeart       bool
@@ -10,32 +10,32 @@ type Cell struct {
 	adjacentMines int
 }
 
-// IsMine indicates if the cell has a mine planted
+// IsMine indicates if the cell has a mine planted.
 func (c *Cell) IsMine() bool {
 	return c.isMine
 }
 
-// IsHeart indicates if the cell has a heart pickup
+// IsHeart indicates if the cell has a heart pickup.
 func (c *Cell) IsHeart() bool {
 	return c.isHeart
 }
 
-// IsRevealed indicates if the cell has been revealed
+// IsRevealed indicates if the cell has been revealed.
 func (c *Cell) IsRevealed() bool {
 	return c.isRevealed
 }
 
-// IsFlagged indicates if the cell was marked with a flag
+// IsFlagged indicates if the cell was marked with a flag.
 func (c *Cell) IsFlagged() bool {
 	return c.isFlagged
 }
 
-// IsQuestioned indicates if the cell was marked with a question
+// IsQuestioned indicates if the cell was marked with a question.
 func (c *Cell) IsQuestioned() bool {
 	return c.isQuestioned
 }
 
-// AdjacentMines returns precalculated amount of adjacent mines
+// AdjacentMines returns precalculated amount of adjacent mines.
 func (c *Cell) AdjacentMines() int {
 	return c.adjacentMines
 }

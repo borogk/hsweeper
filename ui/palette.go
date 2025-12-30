@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+// Palette defines colors for all graphics elements in the game.
 type Palette struct {
 	Blank                 tcell.Style
 	PlainText             tcell.Style
@@ -85,6 +86,7 @@ var defaultPalette = Palette{
 	},
 }
 
+// Returns default palette with modifications depending on game status.
 func gamePalette(g *game.Game) Palette {
 	palette := defaultPalette
 	if g.Status() == game.StatusLost {
