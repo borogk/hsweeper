@@ -272,6 +272,53 @@ func (g *Game) Reveal(x, y int) RevealResult {
 	return g.revealInner(x, y)
 }
 
+// AdvancedReveal reveals adjacent cells after exact amount of them were flagged.
+func (g *Game) AdvancedReveal(x, y int) RevealResult {
+	g.Lock()
+	defer g.Unlock()
+
+	cell := g.Cell(x, y)
+
+	// Only allow revealed numbered cells
+	if !cell.isRevealed || cell.adjacentMines == 0 {
+		return RevealResultBlocked
+	}
+
+	// Proceed only if adjacent flags match the cell number
+	adjacentFlags := 0
+	for _, offset := range adjacentOffsets {
+		if g.Cell(x+offset.x, y+offset.y).isFlagged {
+			adjacentFlags++
+		}
+	}
+	if adjacentFlags != cell.adjacentMines {
+		return RevealResultBlocked
+	}
+
+	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
+	// If any were revealed - combined result would be at least revealed, if any blasted - blast
+	result := RevealResultBlocked
+	for _, offset := range adjacentOffsets {
+		subResult := g.revealInner(x+offset.x, y+offset.y)
+		if subResult > result {
+			result = subResult
+		}
+	}
+
+	// Blast means the adjacent flags were incorrect, remove them for safety
+	if result == RevealResultBlast {
+		for _, offset := range adjacentOffsets {
+			adjacentCell := g.Cell(x+offset.x, y+offset.y)
+			if adjacentCell.isFlagged {
+				adjacentCell.isFlagged = false
+				g.flaggedCounter--
+			}
+		}
+	}
+
+	return result
+}
+
 // Inner implementation of Reveal, extracted to avoid locking twice on recursion.
 func (g *Game) revealInner(x, y int) RevealResult {
 	cell := g.Cell(x, y)
@@ -327,53 +374,6 @@ func (g *Game) revealInner(x, y int) RevealResult {
 	// We are still alive and only mines are left unrevealed, declare victory
 	if g.status != StatusLost && g.unrevealedCounter == g.minesLeft {
 		g.status = StatusWon
-	}
-
-	return result
-}
-
-// AdvancedReveal reveals adjacent cells after exact amount of them were flagged.
-func (g *Game) AdvancedReveal(x, y int) RevealResult {
-	g.Lock()
-	defer g.Unlock()
-
-	cell := g.Cell(x, y)
-
-	// Only allow revealed numbered cells
-	if !cell.isRevealed || cell.adjacentMines == 0 {
-		return RevealResultBlocked
-	}
-
-	// Proceed only if adjacent flags match the cell number
-	adjacentFlags := 0
-	for _, offset := range adjacentOffsets {
-		if g.Cell(x+offset.x, y+offset.y).isFlagged {
-			adjacentFlags++
-		}
-	}
-	if adjacentFlags != cell.adjacentMines {
-		return RevealResultBlocked
-	}
-
-	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
-	// If any were revealed - combined result would be at least revealed, if any blasted - blast
-	result := RevealResultBlocked
-	for _, offset := range adjacentOffsets {
-		subResult := g.revealInner(x+offset.x, y+offset.y)
-		if subResult > result {
-			result = subResult
-		}
-	}
-
-	// Blast means the adjacent flags were incorrect, remove them for safety
-	if result == RevealResultBlast {
-		for _, offset := range adjacentOffsets {
-			adjacentCell := g.Cell(x+offset.x, y+offset.y)
-			if adjacentCell.isFlagged {
-				adjacentCell.isFlagged = false
-				g.flaggedCounter--
-			}
-		}
 	}
 
 	return result
