@@ -21,7 +21,7 @@ jobs:
     - name: Upload for Windows
       uses: actions/upload-artifact@v4
       with:
-        name: 'hsweeper-${{ github.ref_name }}-windows-amd64.zip'
+        name: 'hsweeper-${{ github.ref_name }}-windows-amd64'
         path: |
           ./hsweeper.exe
           ./LICENSE
@@ -44,7 +44,7 @@ jobs:
       - name: Upload for Linux
         uses: actions/upload-artifact@v4
         with:
-          name: 'hsweeper-${{ github.ref_name }}-linux-amd64.zip'
+          name: 'hsweeper-${{ github.ref_name }}-linux-amd64'
           path: |
             ./hsweeper
             ./LICENSE
@@ -67,7 +67,7 @@ jobs:
       - name: Upload for macOS
         uses: actions/upload-artifact@v4
         with:
-          name: 'hsweeper-${{ github.ref_name }}-macos-arm64.zip'
+          name: 'hsweeper-${{ github.ref_name }}-macos-arm64'
           path: |
             ./hsweeper
             ./LICENSE
