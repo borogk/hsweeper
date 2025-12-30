@@ -60,6 +60,309 @@ func TestNewGame(t *testing.T) {
 	})
 }
 
+func TestGame_RestoreSave(t *testing.T) {
+	snapshot := &Snapshot{
+		Status:        StatusStarted,
+		Width:         6,
+		Height:        5,
+		MinesToPlant:  8,
+		HeartsToPlant: 1,
+		LivesLeft:     4,
+		HeartsLeft:    1,
+		MineLocations: locationsFromBitmap(
+			"------",
+			"--xx--",
+			"-xxxx-",
+			"--xx--",
+			"------",
+		),
+		RevealedLocations: locationsFromBitmap(
+			"xxxxxx",
+			"x----x",
+			"x----x",
+			"x----x",
+			"xxxxxx",
+		),
+		UncollectedHeartLocations: locationsFromBitmap(
+			"x----x",
+			"------",
+			"------",
+			"------",
+			"------",
+		),
+		FlaggedLocations: locationsFromBitmap(
+			"------",
+			"--xx--",
+			"------",
+			"------",
+			"------",
+		),
+		QuestionedLocations: locationsFromBitmap(
+			"------",
+			"------",
+			"------",
+			"--xx--",
+			"------",
+		),
+	}
+
+	t.Run("RestoreGame correctly restores all game aspects", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.status, StatusStarted)
+		assertEquals(t, g.width, 6)
+		assertEquals(t, g.height, 5)
+		assertEquals(t, g.minesToPlant, 8)
+		assertEquals(t, g.heartsToPlant, 1)
+		assertEquals(t, g.livesLeft, 4)
+		assertEquals(t, g.heartsLeft, 1)
+		assertEquals(t, g.unrevealedCounter, 12)
+		assertEquals(t, g.flaggedCounter, 2)
+		assertEquals(t, g.heartSpawnCounter, 4)
+		assertEquals(t, g.heartSpawnThreshold, 2)
+
+		assertBitmapEquals(t, g.toNumbersMap(),
+			"012210",
+			"134431",
+			"136631",
+			"134431",
+			"012210",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellMine),
+			"------",
+			"--xx--",
+			"-xxxx-",
+			"--xx--",
+			"------",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"xxxxxx",
+			"x----x",
+			"x----x",
+			"x----x",
+			"xxxxxx",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellHeart),
+			"x----x",
+			"------",
+			"------",
+			"------",
+			"------",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellFlagged),
+			"------",
+			"--xx--",
+			"------",
+			"------",
+			"------",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellQuestioned),
+			"------",
+			"------",
+			"------",
+			"--xx--",
+			"------",
+		)
+	})
+
+	t.Run("Save creates correct snapshot", func(t *testing.T) {
+		save := RestoreGame(snapshot).Save()
+
+		assertEquals(t, save.Status, StatusStarted)
+		assertEquals(t, save.Width, 6)
+		assertEquals(t, save.Height, 5)
+		assertEquals(t, save.MinesToPlant, 8)
+		assertEquals(t, save.HeartsToPlant, 1)
+		assertEquals(t, save.LivesLeft, 4)
+		assertEquals(t, save.HeartsLeft, 1)
+		assertEquals(t, save.MineLocations, []int{8, 9, 13, 14, 15, 16, 20, 21})
+		assertEquals(t, save.RevealedLocations, []int{0, 1, 2, 3, 4, 5, 6, 11, 12, 17, 18, 23, 24, 25, 26, 27, 28, 29})
+		assertEquals(t, save.UncollectedHeartLocations, []int{0, 5})
+		assertEquals(t, save.FlaggedLocations, []int{8, 9})
+		assertEquals(t, save.QuestionedLocations, []int{20, 21})
+	})
+
+	t.Run("save-restore-save again produce two identical snapshots", func(t *testing.T) {
+		firstSave := RestoreGame(snapshot).Save()
+		secondSave := RestoreGame(firstSave).Save()
+		assertEquals(t, firstSave, secondSave)
+	})
+
+	t.Run("RestoreGame doesn't reveal twice", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:            StatusStarted,
+			Width:             3,
+			Height:            3,
+			LivesLeft:         1,
+			RevealedLocations: []int{0, 1, 0, 1},
+		})
+
+		assertEquals(t, g.unrevealedCounter, 7)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"xx-",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't reveal mined cells", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:            StatusStarted,
+			Width:             3,
+			Height:            3,
+			LivesLeft:         1,
+			MineLocations:     []int{0, 1},
+			RevealedLocations: []int{0, 1, 2},
+		})
+
+		assertEquals(t, g.unrevealedCounter, 8)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"--x",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put hearts twice", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:                    StatusStarted,
+			Width:                     3,
+			Height:                    3,
+			LivesLeft:                 1,
+			RevealedLocations:         []int{0, 1},
+			UncollectedHeartLocations: []int{0, 1, 0, 1},
+		})
+
+		assertBitmapEquals(t, g.toBitmap(isCellHeart),
+			"xx-",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put hearts on unrevealed cells", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:                    StatusStarted,
+			Width:                     3,
+			Height:                    3,
+			LivesLeft:                 1,
+			RevealedLocations:         []int{0, 1},
+			UncollectedHeartLocations: []int{0, 1, 2},
+		})
+
+		assertBitmapEquals(t, g.toBitmap(isCellHeart),
+			"xx-",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put hearts on bomb-adjacent cells", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:    StatusStarted,
+			Width:     3,
+			Height:    3,
+			LivesLeft: 1,
+			MineLocations: locationsFromBitmap(
+				"---",
+				"---",
+				"--x",
+			),
+			RevealedLocations: locationsFromBitmap(
+				"xxx",
+				"xxx",
+				"---",
+			),
+			UncollectedHeartLocations: locationsFromBitmap(
+				"xxx",
+				"xxx",
+				"---",
+			),
+		})
+
+		assertBitmapEquals(t, g.toBitmap(isCellHeart),
+			"xxx",
+			"x--",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put flags twice", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:           StatusStarted,
+			Width:            3,
+			Height:           3,
+			LivesLeft:        1,
+			FlaggedLocations: []int{0, 1, 0, 1},
+		})
+
+		assertEquals(t, g.flaggedCounter, 2)
+		assertBitmapEquals(t, g.toBitmap(isCellFlagged),
+			"xx-",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put flags on revealed cells", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:            StatusStarted,
+			Width:             3,
+			Height:            3,
+			LivesLeft:         1,
+			RevealedLocations: []int{0, 1},
+			FlaggedLocations:  []int{0, 1, 2},
+		})
+
+		assertEquals(t, g.flaggedCounter, 1)
+		assertBitmapEquals(t, g.toBitmap(isCellFlagged),
+			"--x",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put questions on revealed cells", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:              StatusStarted,
+			Width:               3,
+			Height:              3,
+			LivesLeft:           1,
+			RevealedLocations:   []int{0, 1},
+			QuestionedLocations: []int{0, 1, 2},
+		})
+
+		assertBitmapEquals(t, g.toBitmap(isCellQuestioned),
+			"--x",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("RestoreGame doesn't put questions on flags", func(t *testing.T) {
+		g := RestoreGame(&Snapshot{
+			Status:              StatusStarted,
+			Width:               3,
+			Height:              3,
+			LivesLeft:           1,
+			FlaggedLocations:    []int{0, 1},
+			QuestionedLocations: []int{0, 1, 2},
+		})
+
+		assertEquals(t, g.flaggedCounter, 2)
+		assertBitmapEquals(t, g.toBitmap(isCellFlagged),
+			"xx-",
+			"---",
+			"---",
+		)
+		assertBitmapEquals(t, g.toBitmap(isCellQuestioned),
+			"--x",
+			"---",
+			"---",
+		)
+	})
+}
+
 func TestGame_Status(t *testing.T) {
 	g := &Game{status: StatusStarted}
 	assertEquals(t, g.Status(), StatusStarted)

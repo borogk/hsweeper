@@ -137,7 +137,7 @@ func (g *Game) Save() *Snapshot {
 		RevealedLocations:         g.collectLocationsForSnapshot(isCellRevealed),
 		UncollectedHeartLocations: g.collectLocationsForSnapshot(isCellHeart),
 		FlaggedLocations:          g.collectLocationsForSnapshot(isCellFlagged),
-		QuestionedLocations:       g.collectLocationsForSnapshot(isCellHeart),
+		QuestionedLocations:       g.collectLocationsForSnapshot(isCellQuestioned),
 	}
 }
 
