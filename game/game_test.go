@@ -202,8 +202,8 @@ func testToggleMark(
 	t *testing.T,
 	toggle func(g *Game, x, y int),
 	toggleOther func(g *Game, x, y int),
-	checkMark func(c *Cell) bool,
-	checkOtherMark func(c *Cell) bool,
+	checkMark CellPredicate,
+	checkOtherMark CellPredicate,
 ) {
 	snapshot := &Snapshot{
 		Status:    StatusStarted,
@@ -215,7 +215,6 @@ func testToggleMark(
 	t.Run("adds and removes mark", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 
-		beforeToggle := g.toBitmap(checkMark)
 		toggle(g, 1, 2)
 		afterToggledFirst := g.toBitmap(checkMark)
 		toggle(g, 2, 2)
@@ -225,11 +224,6 @@ func testToggleMark(
 		toggle(g, 2, 2)
 		afterToggledSecondTwice := g.toBitmap(checkMark)
 
-		assertBitmapEquals(t, beforeToggle,
-			"---",
-			"---",
-			"---",
-		)
 		assertBitmapEquals(t, afterToggledFirst,
 			"---",
 			"---",
@@ -262,6 +256,130 @@ func testToggleMark(
 		assertEquals(t, checkMark(cell), true)
 		assertEquals(t, checkOtherMark(cell), false)
 	})
+
+	for _, status := range []Status{StatusLost, StatusWon} {
+		t.Run("does nothing of finished game", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+			g.status = status
+
+			for x := 0; x < 3; x++ {
+				for y := 0; y < 3; y++ {
+					toggle(g, x, y)
+				}
+			}
+			afterToggledAll := g.toBitmap(checkMark)
+
+			assertBitmapEquals(t, afterToggledAll,
+				"---",
+				"---",
+				"---",
+			)
+		})
+	}
+}
+
+func TestGame_ClearFlagAndQuestion(t *testing.T) {
+	snapshot := &Snapshot{
+		Status:    StatusStarted,
+		Width:     3,
+		Height:    3,
+		LivesLeft: 1,
+		FlaggedLocations: locationsFromBitmap(
+			"xx-",
+			"---",
+			"---",
+		),
+		QuestionedLocations: locationsFromBitmap(
+			"---",
+			"---",
+			"-xx",
+		),
+	}
+
+	t.Run("clears flags", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ClearFlagAndQuestion(0, 0)
+		afterClearedOne := g.toBitmap(isCellFlagged)
+		g.ClearFlagAndQuestion(1, 0)
+		afterClearedBoth := g.toBitmap(isCellFlagged)
+
+		assertBitmapEquals(t, afterClearedOne,
+			"-x-",
+			"---",
+			"---",
+		)
+		assertBitmapEquals(t, afterClearedBoth,
+			"---",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("clears questions", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ClearFlagAndQuestion(1, 2)
+		afterClearedOne := g.toBitmap(isCellQuestioned)
+		g.ClearFlagAndQuestion(2, 2)
+		afterClearedBoth := g.toBitmap(isCellQuestioned)
+
+		assertBitmapEquals(t, afterClearedOne,
+			"---",
+			"---",
+			"--x",
+		)
+		assertBitmapEquals(t, afterClearedBoth,
+			"---",
+			"---",
+			"---",
+		)
+	})
+
+	t.Run("does nothing on unmarked cells", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ClearFlagAndQuestion(1, 1)
+		flagsAfterClear := g.toBitmap(isCellFlagged)
+		questionsAfterClear := g.toBitmap(isCellQuestioned)
+
+		assertBitmapEquals(t, flagsAfterClear,
+			"xx-",
+			"---",
+			"---",
+		)
+		assertBitmapEquals(t, questionsAfterClear,
+			"---",
+			"---",
+			"-xx",
+		)
+	})
+
+	for _, status := range []Status{StatusLost, StatusWon} {
+		t.Run("does nothing on finished game", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+			g.status = status
+
+			for x := 0; x < 3; x++ {
+				for y := 0; y < 3; y++ {
+					g.ClearFlagAndQuestion(x, y)
+				}
+			}
+			flagsAfterClearedAll := g.toBitmap(isCellFlagged)
+			questionsAfterClearedAll := g.toBitmap(isCellQuestioned)
+
+			assertBitmapEquals(t, flagsAfterClearedAll,
+				"xx-",
+				"---",
+				"---",
+			)
+			assertBitmapEquals(t, questionsAfterClearedAll,
+				"---",
+				"---",
+				"-xx",
+			)
+		})
+	}
 }
 
 // TODO: test other functions
