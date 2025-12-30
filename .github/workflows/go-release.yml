@@ -2,6 +2,9 @@ name: Go Release
 
 on: workflow_dispatch
 
+env:
+  VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('build.{0}', github.run_number) }}
+
 jobs:
 
   build-windows:
@@ -21,7 +24,7 @@ jobs:
     - name: Upload for Windows
       uses: actions/upload-artifact@v4
       with:
-        name: 'hsweeper-${{ github.ref_name }}-windows-amd64'
+        name: 'hsweeper-${{ env.VERSION }}-windows-amd64'
         path: |
           ./hsweeper.exe
           ./LICENSE
@@ -44,7 +47,7 @@ jobs:
       - name: Upload for Linux
         uses: actions/upload-artifact@v4
         with:
-          name: 'hsweeper-${{ github.ref_name }}-linux-amd64'
+          name: 'hsweeper-${{ env.VERSION }}-linux-amd64'
           path: |
             ./hsweeper
             ./LICENSE
@@ -67,7 +70,7 @@ jobs:
       - name: Upload for macOS
         uses: actions/upload-artifact@v4
         with:
-          name: 'hsweeper-${{ github.ref_name }}-macos-arm64'
+          name: 'hsweeper-${{ env.VERSION }}-macos-arm64'
           path: |
             ./hsweeper
             ./LICENSE
