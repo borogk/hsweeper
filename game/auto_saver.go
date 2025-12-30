@@ -29,7 +29,7 @@ func DefaultSavePath() string {
 // NewAutoSaver creates an auto-saver for specified game and save path.
 func NewAutoSaver(game *Game, savePath string) *AutoSaver {
 	// Make sure we have a folder to save into
-	_ = os.MkdirAll(path.Dir(savePath), 0666)
+	_ = os.MkdirAll(path.Dir(savePath), 0700)
 
 	s := &AutoSaver{
 		game:        game,
@@ -74,7 +74,7 @@ func (s *AutoSaver) save() {
 	if s.needsToSave {
 		if !s.game.IsFinished() {
 			data := s.game.Save().Encode()
-			_ = os.WriteFile(s.savePath, data, 0666)
+			_ = os.WriteFile(s.savePath, data, 0600)
 		} else {
 			// Delete finished game from disk
 			_ = os.Remove(s.savePath)
