@@ -1,36 +1,27 @@
 ![](img/logo.png)
 
-_H-Sweeper_ is a Minesweeper clone with extra lives mechanic, that runs entirely in terminal.
-Extra lives were added because it's irritating to play well, only to encounter a pure 50-50 that ruins your run.
+_H-Sweeper_ is a Minesweeper clone with extra lives feature, that runs entirely in terminal.
 
 ![](img/sample.png)
 
-### How to install
+### Downloads
 
-> [!IMPORTANT]
-> Requires [Go version 1.25 or newer](https://go.dev/doc/install)
+| File name                                                                                                                                               | Platform    |
+|---------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
+| [hsweeper-v1.0.0-beta.3-windows-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-windows-amd64.zip) | Windows x64 |
+| [hsweeper-v1.0.0-beta.3-linux-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-linux-amd64.zip)     | Linux x64   |
+| [hsweeper-v1.0.0-beta.3-macos-arm64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.3/hsweeper-v1.0.0-beta.3-macos-arm64.zip)     | macOS ARM64 |
 
-> [!IMPORTANT]
-> Project is still in beta
-
-Install by running in terminal:
-
-```shell
-go install github.com/borogk/hsweeper@v1.0.0-beta.1
-```
-
-After installing, simply run:
+Alternatively, you can install from sources (requires [Go 1.25](https://go.dev/doc/install)):
 
 ```shell
-hsweeper
+go install github.com/borogk/hsweeper@v1.0.0-beta.3
 ```
 
 ### How to play
 
 > [!NOTE]
-> You are expected to already know the rules of Minesweeper.
-> In case you don't, [this article](https://en.wikipedia.org/wiki/Minesweeper_(video_game))
-> does a decent job explaining.
+> You are expected to already know the rules of Minesweeper
 
 | Key             | Function                         |
 |-----------------|----------------------------------|
@@ -46,14 +37,14 @@ hsweeper
 _Action Key_ does different actions depending on context.
 In-game it combines functions of `Left-click`, `Right-click` and `Left+right-click` of Windows Minesweeper.
 
-| Condition                                                 | Function                                             |
-|-----------------------------------------------------------|------------------------------------------------------|
-| In title menu                                             | Select current option                                |
-| First move of a game                                      | Reveal around the cursor and start for real          |
-| On unrevealed cell                                        | Toggle `⚑`                                           |
-| On cells, where amount of adjacent `⚑` matches the number | Reveal unmarked adjacent cells (known as "chording") |
-| On cells with `♥`                                         | Pick up extra life                                   |
-| After game over                                           | Restart game                                         |
+| Condition                                                 | Function                                    |
+|-----------------------------------------------------------|---------------------------------------------|
+| In title menu                                             | Select current option                       |
+| First move of a game                                      | Reveal around the cursor and start the game |
+| On unrevealed cell                                        | Toggle `⚑`                                  |
+| On cells, where amount of adjacent `⚑` matches the number | Reveal unmarked adjacent cells              |
+| On cells with `♥`                                         | Pick up extra life                          |
+| After game over                                           | Restart game                                |
 
 > [!NOTE]
 > Design ideas behind having such a control scheme:
