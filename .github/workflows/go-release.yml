@@ -5,6 +5,7 @@ on: workflow_dispatch
 jobs:
 
   build-windows:
+    name: Windows
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -14,11 +15,60 @@ jobs:
       with:
         go-version: '1.25'
 
-    - name: Build
-      run: go build -trimpath -ldflags="-s -w" -o out/hsweeper.exe
+    - name: Build for Windows
+      run: go build -trimpath -ldflags="-s -w" -o hsweeper.exe
 
-    - name: Upload
+    - name: Upload for Windows
       uses: actions/upload-artifact@v4
       with:
-        path: 'out/hsweeper.exe'
-        name: 'hsweeper.exe'
+        name: 'hsweeper-${{ github.ref_name }}-windows-amd64.zip'
+        path: |
+          'hsweeper.exe'
+          'LICENSE'
+          'LICENSE-THIRD-PARTY'
+
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+
+      - name: Build for Linux
+        run: go build -trimpath -ldflags="-s -w" -o hsweeper
+
+      - name: Upload for Linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'hsweeper-${{ github.ref_name }}-linux-amd64.zip'
+          path: |
+            'hsweeper'
+            'LICENSE'
+            'LICENSE-THIRD-PARTY'
+
+  build-macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'
+
+      - name: Build for macOS
+        run: go build -trimpath -ldflags="-s -w" -o hsweeper
+
+      - name: Upload for macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'hsweeper-${{ github.ref_name }}-macos-arm64.zip'
+          path: |
+            'hsweeper'
+            'LICENSE'
+            'LICENSE-THIRD-PARTY'
