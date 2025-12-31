@@ -349,7 +349,12 @@ func (g *Game) revealInner(x, y int) RevealResult {
 			cell.isMine = false
 			g.minesLeft--
 			for _, offset := range adjacentOffsets {
-				g.Cell(x+offset.x, y+offset.y).adjacentMines--
+				adjacentCell := g.Cell(x+offset.x, y+offset.y)
+				adjacentCell.adjacentMines--
+				// After blast an adjacent cell might become eligible for propagation
+				if adjacentCell.isRevealed && adjacentCell.adjacentMines == 0 {
+					g.propagateReveal(x+offset.x, y+offset.y)
+				}
 			}
 		} else {
 			// No lives left, declare loss
@@ -357,18 +362,9 @@ func (g *Game) revealInner(x, y int) RevealResult {
 		}
 	}
 
+	// Propagate reveal
 	if cell.adjacentMines == 0 {
-		// When all adjacent cells are free of mines - reveal them all
-		for _, offset := range adjacentOffsets {
-			g.revealInner(x+offset.x, y+offset.y)
-		}
-
-		// Check if it is time to spawn a heart
-		g.heartSpawnCounter++
-		if g.heartsLeft > 0 && g.heartSpawnCounter%g.heartSpawnThreshold == 0 {
-			cell.isHeart = true
-			g.heartsLeft--
-		}
+		g.propagateReveal(x, y)
 	}
 
 	// We are still alive and only mines are left unrevealed, declare victory
@@ -377,6 +373,23 @@ func (g *Game) revealInner(x, y int) RevealResult {
 	}
 
 	return result
+}
+
+// Reveals adjacent cells, center of propagation itself must be revealed and isolated.
+// This function is called once as soon as both conditions are met.
+func (g *Game) propagateReveal(x, y int) {
+	cell := g.Cell(x, y)
+
+	// Process heart spawning here, as revealed isolated cells are all candidates for having a pickup
+	g.heartSpawnCounter++
+	if g.heartsLeft > 0 && g.heartSpawnCounter%g.heartSpawnThreshold == 0 {
+		cell.isHeart = true
+		g.heartsLeft--
+	}
+
+	for _, offset := range adjacentOffsets {
+		g.revealInner(x+offset.x, y+offset.y)
+	}
 }
 
 // Collects list of indices of cells matching specified predicate.

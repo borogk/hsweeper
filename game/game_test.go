@@ -790,9 +790,9 @@ func TestGame_Reveal(t *testing.T) {
 		Width:         10,
 		Height:        10,
 		MinesToPlant:  20,
-		HeartsToPlant: 2,
+		HeartsToPlant: 3,
 		LivesLeft:     2,
-		HeartsLeft:    2,
+		HeartsLeft:    3,
 		MineLocations: locationsFromBitmap(
 			"----------",
 			"-x-----xx-",
@@ -819,7 +819,7 @@ func TestGame_Reveal(t *testing.T) {
 		),
 	}
 
-	t.Run("Reveal opens single or multiple cells, doesn't lose lives and continues the game", func(t *testing.T) {
+	t.Run("opens single or multiple cells, doesn't lose lives and continues the game", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 
 		// Top right uncovers only one
@@ -895,7 +895,7 @@ func TestGame_Reveal(t *testing.T) {
 		)
 	})
 
-	t.Run("Reveal loses a live, removes a mine and adjusts cell numbers", func(t *testing.T) {
+	t.Run("loses a live, removes a mine and adjusts cell numbers", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 
 		assertEquals(t, g.Reveal(1, 1), RevealResultBlast)
@@ -928,7 +928,7 @@ func TestGame_Reveal(t *testing.T) {
 		)
 	})
 
-	t.Run("Reveal loses the last live, doesn't remove the last mine and loses the game", func(t *testing.T) {
+	t.Run("loses the last live, doesn't remove the last mine and loses the game", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 
 		assertEquals(t, g.Reveal(1, 1), RevealResultBlast)
@@ -951,7 +951,7 @@ func TestGame_Reveal(t *testing.T) {
 		)
 	})
 
-	t.Run("Reveal wins the game after revealing enough", func(t *testing.T) {
+	t.Run("wins the game after revealing enough", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 
 		// Revealing around bomb pockets and then opening empty patches should do the trick
@@ -1017,7 +1017,6 @@ func TestGame_Reveal(t *testing.T) {
 
 		// Reveal remaining empty patches
 		g.Reveal(4, 0)
-		g.Reveal(9, 4)
 		g.Reveal(0, 9)
 
 		assertEquals(t, g.livesLeft, 2)
@@ -1036,8 +1035,136 @@ func TestGame_Reveal(t *testing.T) {
 		)
 	})
 
-	// TODO: test reveal propagation on blast
-	// TODO: test hearts spawning
+	t.Run("propagates correctly on blast", func(t *testing.T) {
+		t.Run("blast spot became isolated", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.Reveal(1, 1)
+
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"xxxxxxx---",
+				"xxxxxxx---",
+				"xxxxxxxxxx",
+				"----xxxxxx",
+				"----xxxxxx",
+				"----xxxxxx",
+				"-----xxxxx",
+				"----------",
+				"----------",
+				"----------",
+			)
+		})
+
+		t.Run("blast spot didn't become isolated, adjacent isolated cell is not yet revealed", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.Reveal(3, 3)
+
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"x---------",
+				"----------",
+				"----------",
+				"---x------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+			)
+		})
+
+		t.Run("blast spot didn't become isolated, adjacent isolated cell is already revealed", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.Reveal(4, 2)
+			g.Reveal(3, 3)
+
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"x-xxxxx---",
+				"--xxxxx---",
+				"--xxxxxxxx",
+				"---xxxxxxx",
+				"----xxxxxx",
+				"----xxxxxx",
+				"-----xxxxx",
+				"----------",
+				"----------",
+				"----------",
+			)
+		})
+	})
+
+	t.Run("spawns hearts on opening empty cells", func(t *testing.T) {
+		t.Run("one reveal order", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.Reveal(0, 9)
+			assertEquals(t, g.heartsLeft, 2)
+			assertBitmapEquals(t, g.toBitmap(isCellHeart),
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"-----x----",
+			)
+
+			g.Reveal(9, 4)
+			assertEquals(t, g.heartsLeft, 0)
+			assertBitmapEquals(t, g.toBitmap(isCellHeart),
+				"-----x----",
+				"----------",
+				"----------",
+				"-------x--",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"-----x----",
+			)
+		})
+
+		t.Run("another reveal order", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.Reveal(1, 9)
+			assertEquals(t, g.heartsLeft, 2)
+			assertBitmapEquals(t, g.toBitmap(isCellHeart),
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----x-----",
+			)
+
+			g.Reveal(8, 4)
+			assertEquals(t, g.heartsLeft, 0)
+			assertBitmapEquals(t, g.toBitmap(isCellHeart),
+				"---x------",
+				"----------",
+				"----------",
+				"----------",
+				"---------x",
+				"----------",
+				"----------",
+				"----------",
+				"----------",
+				"----x-----",
+			)
+		})
+	})
+
 	// TODO: test does nothing on flags
 	// TODO: test does nothing on question marks
 	// TODO: test does nothing on finished game
