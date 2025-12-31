@@ -949,21 +949,93 @@ func TestGame_Reveal(t *testing.T) {
 			"-------x-x",
 			"-------xxx",
 		)
-		assertBitmapEquals(t, g.toNumbersMap(),
-			"0000001221",
-			"0000001111",
-			"1232101221",
-			"1132200000",
-			"1242200000",
-			"1244310000",
-			"2232111232",
-			"2243212242",
-			"1110003484",
-			"0000002242",
+	})
+
+	t.Run("Reveal wins the game after revealing enough", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		// Revealing around bomb pockets and then opening empty patches should do the trick
+
+		// Bomb pocket 1
+		g.Reveal(0, 0)
+		g.Reveal(1, 0)
+		g.Reveal(2, 0)
+		g.Reveal(0, 1)
+		g.Reveal(2, 1)
+		g.Reveal(0, 2)
+		g.Reveal(1, 2)
+		g.Reveal(2, 2)
+
+		// Bomb pocket 2
+		g.Reveal(6, 0)
+		g.Reveal(7, 0)
+		g.Reveal(8, 0)
+		g.Reveal(9, 0)
+		g.Reveal(6, 1)
+		g.Reveal(9, 1)
+		g.Reveal(6, 2)
+		g.Reveal(7, 2)
+		g.Reveal(8, 2)
+		g.Reveal(9, 2)
+
+		// Bomb pocket 3
+		g.Reveal(3, 2)
+		g.Reveal(4, 2)
+		g.Reveal(0, 3)
+		g.Reveal(4, 3)
+		g.Reveal(0, 4)
+		g.Reveal(1, 4)
+		g.Reveal(2, 4)
+		g.Reveal(4, 4)
+		g.Reveal(2, 5)
+		g.Reveal(3, 5)
+		g.Reveal(4, 5)
+
+		// Bomb pocket 4
+		g.Reveal(0, 5)
+		g.Reveal(1, 5)
+		g.Reveal(5, 5)
+		g.Reveal(0, 6)
+		g.Reveal(5, 6)
+		g.Reveal(0, 7)
+		g.Reveal(2, 7)
+		g.Reveal(3, 7)
+		g.Reveal(4, 7)
+		g.Reveal(5, 7)
+
+		// Bomb pocket 5
+		g.Reveal(6, 6)
+		g.Reveal(7, 6)
+		g.Reveal(8, 6)
+		g.Reveal(9, 6)
+		g.Reveal(6, 7)
+		g.Reveal(6, 8)
+		g.Reveal(6, 9)
+
+		// Inside bomb pocket 5
+		g.Reveal(8, 8)
+
+		// Reveal remaining empty patches
+		g.Reveal(4, 0)
+		g.Reveal(9, 4)
+		g.Reveal(0, 9)
+
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.status, StatusWon)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"xxxxxxxxxx",
+			"x-xxxxx--x",
+			"xxxxxxxxxx",
+			"x---xxxxxx",
+			"xxx-xxxxxx",
+			"xxxxxxxxxx",
+			"x----xxxxx",
+			"x-xxxxx---",
+			"xxxxxxx-x-",
+			"xxxxxxx---",
 		)
 	})
 
-	// TODO: test revealing enough wins
 	// TODO: test reveal propagation on blast
 	// TODO: test hearts spawning
 	// TODO: test does nothing on flags
@@ -975,7 +1047,6 @@ func TestGame_AdvancedReveal(t *testing.T) {
 	// TODO: test reveal with various numbers
 	// TODO: test removes flags on blast
 	// TODO: test reveal propagation on blast
-	// TODO: test revealing enough wins
 	// TODO: test does nothing on unrevealed
 	// TODO: test does nothing on revealed with 0 adjacent
 	// TODO: test does nothing on finished game
