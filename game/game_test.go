@@ -433,7 +433,7 @@ func TestGame_IsFinished(t *testing.T) {
 }
 
 func TestGame_MinesRemaining(t *testing.T) {
-	baseSnapshot := &Snapshot{
+	baseSnapshot := Snapshot{
 		Width:        3,
 		Height:       3,
 		MinesToPlant: 2,
@@ -443,7 +443,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 	t.Run("returns 0 before game starts", func(t *testing.T) {
 		snapshot := baseSnapshot
 		snapshot.Status = StatusReady
-		g := RestoreGame(snapshot)
+		g := RestoreGame(&snapshot)
 
 		assertEquals(t, g.MinesRemaining(), 2)
 	})
@@ -456,7 +456,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 			"---",
 			"xxx",
 		)
-		g := RestoreGame(snapshot)
+		g := RestoreGame(&snapshot)
 
 		assertEquals(t, g.MinesRemaining(), 3)
 	})
@@ -469,7 +469,7 @@ func TestGame_MinesRemaining(t *testing.T) {
 			"---",
 			"xxx",
 		)
-		g := RestoreGame(snapshot)
+		g := RestoreGame(&snapshot)
 		g.ToggleFlag(1, 2)
 		g.ToggleFlag(2, 2)
 
@@ -513,6 +513,16 @@ func testToggleMark(
 		Width:     3,
 		Height:    3,
 		LivesLeft: 1,
+		MineLocations: locationsFromBitmap(
+			"-x-",
+			"xxx",
+			"-x-",
+		),
+		RevealedLocations: locationsFromBitmap(
+			"x--",
+			"---",
+			"---",
+		),
 	}
 
 	t.Run("adds and removes mark", func(t *testing.T) {
@@ -560,8 +570,17 @@ func testToggleMark(
 		assertEquals(t, checkOtherMark(cell), false)
 	})
 
+	t.Run("does nothing on revealed cell", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		toggle(g, 0, 0)
+
+		cell := g.Cell(0, 0)
+		assertEquals(t, checkMark(cell), false)
+	})
+
 	for _, status := range []Status{StatusLost, StatusWon} {
-		t.Run("does nothing of finished game", func(t *testing.T) {
+		t.Run("does nothing on finished game", func(t *testing.T) {
 			g := RestoreGame(snapshot)
 			g.status = status
 
