@@ -968,7 +968,7 @@ func TestGame_Reveal(t *testing.T) {
 	// TODO: test hearts spawning
 	// TODO: test does nothing on flags
 	// TODO: test does nothing on question marks
-	// TODO: test does nothing on lost game
+	// TODO: test does nothing on finished game
 }
 
 func TestGame_AdvancedReveal(t *testing.T) {
@@ -978,4 +978,5 @@ func TestGame_AdvancedReveal(t *testing.T) {
 	// TODO: test revealing enough wins
 	// TODO: test does nothing on unrevealed
 	// TODO: test does nothing on revealed with 0 adjacent
+	// TODO: test does nothing on finished game
 }
