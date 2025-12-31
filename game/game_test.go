@@ -1200,9 +1200,128 @@ func TestGame_Reveal(t *testing.T) {
 }
 
 func TestGame_AdvancedReveal(t *testing.T) {
-	// TODO: test reveal with various numbers
+	snapshot := &Snapshot{
+		Status:       StatusStarted,
+		Width:        10,
+		Height:       10,
+		MinesToPlant: 20,
+		LivesLeft:    1,
+		MineLocations: locationsFromBitmap(
+			"----------",
+			"-x-----xx-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		),
+		RevealedLocations: locationsFromBitmap(
+			"xxx---xxxx",
+			"x-x---x--x",
+			"xxxxx-xxxx",
+			"x---x-----",
+			"xxx-x-----",
+			"xxxxxx----",
+			"x----xxxxx",
+			"x-xxxxx---",
+			"xxx---x-x-",
+			"------x---",
+		),
+	}
+
+	t.Run("reveals adjacent cells when number of adjacent flags matches", func(t *testing.T) {
+		t.Run("1 flag", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.ToggleFlag(1, 1)
+			g.AdvancedReveal(2, 0)
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"xxxxxxxxxx",
+				"x-xxxxx--x",
+				"xxxxxxxxxx",
+				"x---xxxxxx",
+				"xxx-xxxxxx",
+				"xxxxxxxxxx",
+				"x----xxxxx",
+				"x-xxxxx---",
+				"xxx---x-x-",
+				"------x---",
+			)
+		})
+
+		t.Run("2 flags", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.ToggleFlag(7, 1)
+			g.ToggleFlag(8, 1)
+			g.AdvancedReveal(7, 2)
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"xxxxxxxxxx",
+				"x-xxxxx--x",
+				"xxxxxxxxxx",
+				"x---xxxxxx",
+				"xxx-xxxxxx",
+				"xxxxxxxxxx",
+				"x----xxxxx",
+				"x-xxxxx---",
+				"xxx---x-x-",
+				"------x---",
+			)
+		})
+
+		t.Run("3 flags", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.ToggleFlag(7, 7)
+			g.ToggleFlag(8, 7)
+			g.ToggleFlag(9, 7)
+			g.AdvancedReveal(8, 6)
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"xxxxxxxxxx",
+				"x-xxxxx--x",
+				"xxxxxxxxxx",
+				"x---xxxxxx",
+				"xxx-xxxxxx",
+				"xxxxxxxxxx",
+				"x----xxxxx",
+				"x-xxxxx---",
+				"xxx---x-x-",
+				"------x---",
+			)
+		})
+
+		t.Run("4 flags", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+
+			g.ToggleFlag(1, 6)
+			g.ToggleFlag(2, 6)
+			g.ToggleFlag(3, 6)
+			g.ToggleFlag(1, 7)
+			g.AdvancedReveal(2, 7)
+			assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+				"xxx---xxxx",
+				"x-x---x--x",
+				"xxxxx-xxxx",
+				"x---x-----",
+				"xxx-x-----",
+				"xxxxxx----",
+				"x----xxxxx",
+				"x-xxxxx---",
+				"xxxxxxx-x-",
+				"xxxxxxx---",
+			)
+		})
+	})
+
 	// TODO: test removes flags on blast
-	// TODO: test reveal propagation on blast
+	// TODO: test may blast multiple times
+	// TODO: test doesn't blast more than there are lives left
+	// TODO: test does nothing when there are too few flags
+	// TODO: test does nothing when there are too many flags
+	// TODO: test does nothing on 8 flags
 	// TODO: test does nothing on unrevealed
 	// TODO: test does nothing on revealed with 0 adjacent
 	// TODO: test does nothing on finished game
