@@ -1165,9 +1165,38 @@ func TestGame_Reveal(t *testing.T) {
 		})
 	})
 
-	// TODO: test does nothing on flags
-	// TODO: test does nothing on question marks
-	// TODO: test does nothing on finished game
+	t.Run("does nothing on flags", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(1, 0)
+		assertEquals(t, g.Reveal(1, 0), RevealResultBlocked)
+		assertEquals(t, g.Cell(1, 0).isRevealed, false)
+		assertEquals(t, g.unrevealedCounter, 99)
+	})
+
+	t.Run("does nothing on questions", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleQuestion(1, 0)
+		assertEquals(t, g.Reveal(1, 0), RevealResultBlocked)
+		assertEquals(t, g.Cell(1, 0).isRevealed, false)
+		assertEquals(t, g.unrevealedCounter, 99)
+	})
+
+	for _, status := range []Status{StatusLost, StatusWon} {
+		t.Run("does nothing on finished game", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+			g.status = status
+
+			for x := 0; x < 10; x++ {
+				for y := 0; y < 10; y++ {
+					assertEquals(t, g.Reveal(x, y), RevealResultBlocked)
+				}
+			}
+
+			assertEquals(t, g.unrevealedCounter, 99)
+		})
+	}
 }
 
 func TestGame_AdvancedReveal(t *testing.T) {

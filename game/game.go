@@ -321,6 +321,10 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 
 // Inner implementation of Reveal, extracted to avoid locking twice on recursion.
 func (g *Game) revealInner(x, y int) RevealResult {
+	if g.IsFinished() {
+		return RevealResultBlocked
+	}
+
 	cell := g.Cell(x, y)
 
 	// Only allow unrevealed and unmarked cells
