@@ -1315,6 +1315,26 @@ func TestGame_AdvancedReveal(t *testing.T) {
 		})
 	})
 
+	t.Run("propagates revealed cells correctly on blast", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(3, 1)
+
+		assertEquals(t, g.AdvancedReveal(2, 1), RevealResultBlast)
+		assertBitmapEquals(t, g.toBitmap(isCellRevealed),
+			"xxxxxxxxxx",
+			"xxxxxxx--x",
+			"xxxxxxxxxx",
+			"x---xxxxxx",
+			"xxx-xxxxxx",
+			"xxxxxxxxxx",
+			"x----xxxxx",
+			"x-xxxxx---",
+			"xxx---x-x-",
+			"------x---",
+		)
+	})
+
 	t.Run("removes flags on blast", func(t *testing.T) {
 		g := RestoreGame(snapshot)
 

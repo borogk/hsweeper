@@ -285,13 +285,13 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 	}
 
 	// Proceed only if adjacent flags match the cell number
-	adjacentFlags := 0
+	adjacentFlaggedPoints := make([]Point, 0, 8)
 	for _, point := range g.adjacentPoints(x, y) {
 		if g.Cell(point.x, point.y).isFlagged {
-			adjacentFlags++
+			adjacentFlaggedPoints = append(adjacentFlaggedPoints, point)
 		}
 	}
-	if adjacentFlags != cell.adjacentMines {
+	if len(adjacentFlaggedPoints) != cell.adjacentMines {
 		return RevealResultBlocked
 	}
 
@@ -307,11 +307,18 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 
 	// Blast means the adjacent flags were incorrect, remove them for safety
 	if result == RevealResultBlast {
-		for _, point := range g.adjacentPoints(x, y) {
-			adjacentCell := g.Cell(point.x, point.y)
-			if adjacentCell.isFlagged {
-				adjacentCell.isFlagged = false
-				g.flaggedCounter--
+		for _, point := range adjacentFlaggedPoints {
+			g.Cell(point.x, point.y).isFlagged = false
+			g.flaggedCounter--
+
+			// Check if we may reveal formerly flagged location
+			for _, deepPoint := range g.adjacentPoints(point.x, point.y) {
+				deepCell := g.Cell(deepPoint.x, deepPoint.y)
+				if deepCell.isRevealed && deepCell.adjacentMines == 0 {
+					// Any adjacent revealed isolated cell indicates the formerly flag location can be revealed too
+					g.revealInner(point.x, point.y)
+					break
+				}
 			}
 		}
 	}
