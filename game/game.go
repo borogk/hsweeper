@@ -328,17 +328,6 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 
 // Returns list of adjacent points, includes only in-bound ones.
 func (g *Game) adjacentPoints(x, y int) []Point {
-	adjacentOffsets = []Point{
-		{x: -1, y: -1},
-		{x: 0, y: -1},
-		{x: 1, y: -1},
-		{x: 1, y: 0},
-		{x: 1, y: 1},
-		{x: 0, y: 1},
-		{x: -1, y: 1},
-		{x: -1, y: 0},
-	}
-
 	points := make([]Point, 0, 8)
 	for _, offset := range adjacentOffsets {
 		px := x + offset.x
