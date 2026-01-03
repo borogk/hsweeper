@@ -415,7 +415,6 @@ func TestGame_Cell(t *testing.T) {
 	t.Run("returns fake outer cell", func(t *testing.T) {
 		c := g.Cell(-1, -1)
 
-		assertEquals(t, c.isRevealed, true)
 		assertNotSame(t, c, &g.cells[0])
 		assertNotSame(t, c, &g.cells[1])
 		assertNotSame(t, c, &g.cells[2])
@@ -1205,7 +1204,7 @@ func TestGame_AdvancedReveal(t *testing.T) {
 		Width:        10,
 		Height:       10,
 		MinesToPlant: 20,
-		LivesLeft:    1,
+		LivesLeft:    3,
 		MineLocations: locationsFromBitmap(
 			"----------",
 			"-x-----xx-",
@@ -1316,13 +1315,143 @@ func TestGame_AdvancedReveal(t *testing.T) {
 		})
 	})
 
-	// TODO: test removes flags on blast
-	// TODO: test may blast multiple times
-	// TODO: test doesn't blast more than there are lives left
-	// TODO: test does nothing when there are too few flags
-	// TODO: test does nothing when there are too many flags
-	// TODO: test does nothing on 8 flags
-	// TODO: test does nothing on unrevealed
-	// TODO: test does nothing on revealed with 0 adjacent
-	// TODO: test does nothing on finished game
+	t.Run("removes flags on blast", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(8, 1)
+		g.ToggleFlag(8, 3)
+
+		assertEquals(t, g.AdvancedReveal(8, 2), RevealResultBlast)
+		assertEquals(t, g.livesLeft, 2)
+		assertEquals(t, g.Cell(8, 1).isFlagged, false)
+		assertEquals(t, g.Cell(8, 3).isFlagged, false)
+		assertBitmapEquals(t, g.toBitmap(isCellMine),
+			"----------",
+			"-x------x-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		)
+	})
+
+	t.Run("blasts more than once", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(7, 3)
+		g.ToggleFlag(8, 3)
+
+		assertEquals(t, g.AdvancedReveal(8, 2), RevealResultBlast)
+		assertEquals(t, g.livesLeft, 1)
+		assertBitmapEquals(t, g.toBitmap(isCellMine),
+			"----------",
+			"-x--------",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----xxx",
+			"-------x-x",
+			"-------xxx",
+		)
+	})
+
+	t.Run("doesn't blast when all lives are lost", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(7, 5)
+		g.ToggleFlag(8, 5)
+		g.ToggleFlag(9, 5)
+
+		assertEquals(t, g.AdvancedReveal(8, 6), RevealResultBlast)
+		assertEquals(t, g.livesLeft, 0)
+		assertEquals(t, g.status, StatusLost)
+		bitmap := g.toBitmap(isCellMine)
+		assertBitmapEquals(t, bitmap,
+			"----------",
+			"-x-----xx-",
+			"----------",
+			"-xxx------",
+			"---x------",
+			"----------",
+			"-xxxx-----",
+			"-x-----x--",
+			"-------x-x",
+			"-------xxx",
+		)
+	})
+
+	t.Run("does nothing when there are no adjacent flags", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.AdvancedReveal(8, 6), RevealResultBlocked)
+	})
+
+	t.Run("does nothing when there are too few adjacent flags", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(7, 5)
+		g.ToggleFlag(8, 5)
+
+		assertEquals(t, g.AdvancedReveal(8, 6), RevealResultBlocked)
+	})
+
+	t.Run("does nothing when there are too many adjacent flags", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(7, 5)
+		g.ToggleFlag(8, 5)
+		g.ToggleFlag(9, 5)
+		g.ToggleFlag(8, 7)
+
+		assertEquals(t, g.AdvancedReveal(8, 6), RevealResultBlocked)
+	})
+
+	t.Run("does nothing on unrevealed cell", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		g.ToggleFlag(7, 7)
+		g.ToggleFlag(8, 7)
+		g.ToggleFlag(9, 7)
+		g.ToggleFlag(9, 8)
+		g.ToggleFlag(9, 9)
+		g.ToggleFlag(8, 9)
+		g.ToggleFlag(7, 9)
+		g.ToggleFlag(7, 8)
+
+		assertEquals(t, g.AdvancedReveal(8, 8), RevealResultBlocked)
+	})
+
+	t.Run("does nothing on unrevealed cell", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.AdvancedReveal(8, 4), RevealResultBlocked)
+	})
+
+	t.Run("does nothing on revealed cell with 0 adjacent", func(t *testing.T) {
+		g := RestoreGame(snapshot)
+
+		assertEquals(t, g.Reveal(8, 4), RevealResultRevealed)
+		assertEquals(t, g.AdvancedReveal(8, 4), RevealResultBlocked)
+	})
+
+	for _, status := range []Status{StatusLost, StatusWon} {
+		t.Run("does nothing on finished game", func(t *testing.T) {
+			g := RestoreGame(snapshot)
+			g.status = status
+
+			for x := 0; x < 10; x++ {
+				for y := 0; y < 10; y++ {
+					assertEquals(t, g.AdvancedReveal(x, y), RevealResultBlocked)
+				}
+			}
+
+			assertEquals(t, g.unrevealedCounter, 50)
+		})
+	}
 }

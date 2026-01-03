@@ -168,8 +168,8 @@ func (g *Game) Cell(x, y int) *Cell {
 		return &g.cells[i]
 	}
 
-	// Having out-of-bounds representation prevents crashes as well as stops recursive reveals from propagating.
-	return &Cell{isRevealed: true}
+	// We should never end up here, but if we do, returning non-empty fake cell would prevent a crash.
+	return &Cell{}
 }
 
 // IsFinished indicates if the game is one of the finished states.
@@ -286,8 +286,8 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 
 	// Proceed only if adjacent flags match the cell number
 	adjacentFlags := 0
-	for _, offset := range adjacentOffsets {
-		if g.Cell(x+offset.x, y+offset.y).isFlagged {
+	for _, point := range g.adjacentPoints(x, y) {
+		if g.Cell(point.x, point.y).isFlagged {
 			adjacentFlags++
 		}
 	}
@@ -298,8 +298,8 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
 	// If any were revealed - combined result would be at least revealed, if any blasted - blast
 	result := RevealResultBlocked
-	for _, offset := range adjacentOffsets {
-		subResult := g.revealInner(x+offset.x, y+offset.y)
+	for _, point := range g.adjacentPoints(x, y) {
+		subResult := g.revealInner(point.x, point.y)
 		if subResult > result {
 			result = subResult
 		}
@@ -307,8 +307,8 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 
 	// Blast means the adjacent flags were incorrect, remove them for safety
 	if result == RevealResultBlast {
-		for _, offset := range adjacentOffsets {
-			adjacentCell := g.Cell(x+offset.x, y+offset.y)
+		for _, point := range g.adjacentPoints(x, y) {
+			adjacentCell := g.Cell(point.x, point.y)
 			if adjacentCell.isFlagged {
 				adjacentCell.isFlagged = false
 				g.flaggedCounter--
@@ -317,6 +317,30 @@ func (g *Game) AdvancedReveal(x, y int) RevealResult {
 	}
 
 	return result
+}
+
+// Returns list of adjacent points, includes only in-bound ones.
+func (g *Game) adjacentPoints(x, y int) []Point {
+	adjacentOffsets = []Point{
+		{x: -1, y: -1},
+		{x: 0, y: -1},
+		{x: 1, y: -1},
+		{x: 1, y: 0},
+		{x: 1, y: 1},
+		{x: 0, y: 1},
+		{x: -1, y: 1},
+		{x: -1, y: 0},
+	}
+
+	points := make([]Point, 0, 8)
+	for _, offset := range adjacentOffsets {
+		px := x + offset.x
+		py := y + offset.y
+		if !g.IsOutOfBounds(px, py) {
+			points = append(points, Point{px, py})
+		}
+	}
+	return points
 }
 
 // Inner implementation of Reveal, extracted to avoid locking twice on recursion.
@@ -349,15 +373,20 @@ func (g *Game) revealInner(x, y int) RevealResult {
 		g.livesLeft--
 
 		if g.livesLeft > 0 {
-			// Some lives left, remove the mine and adjust neighboring cell numbers
+			// Some lives left, remove the mine
 			cell.isMine = false
 			g.minesLeft--
-			for _, offset := range adjacentOffsets {
-				adjacentCell := g.Cell(x+offset.x, y+offset.y)
-				adjacentCell.adjacentMines--
-				// After blast an adjacent cell might become eligible for propagation
+
+			// Adjust neighboring cell numbers
+			for _, point := range g.adjacentPoints(x, y) {
+				g.Cell(point.x, point.y).adjacentMines--
+			}
+
+			// After blast an adjacent cell might become eligible for propagation
+			for _, point := range g.adjacentPoints(x, y) {
+				adjacentCell := g.Cell(point.x, point.y)
 				if adjacentCell.isRevealed && adjacentCell.adjacentMines == 0 {
-					g.propagateReveal(x+offset.x, y+offset.y)
+					g.propagateReveal(point.x, point.y)
 				}
 			}
 		} else {
@@ -391,8 +420,8 @@ func (g *Game) propagateReveal(x, y int) {
 		g.heartsLeft--
 	}
 
-	for _, offset := range adjacentOffsets {
-		g.revealInner(x+offset.x, y+offset.y)
+	for _, point := range g.adjacentPoints(x, y) {
+		g.revealInner(point.x, point.y)
 	}
 }
 
@@ -446,8 +475,8 @@ func (g *Game) plantMines(mineLocations []int) {
 		for y := 0; y < g.height; y++ {
 			cell := g.Cell(x, y)
 			cell.adjacentMines = 0
-			for _, offset := range adjacentOffsets {
-				if g.Cell(x+offset.x, y+offset.y).isMine {
+			for _, point := range g.adjacentPoints(x, y) {
+				if g.Cell(point.x, point.y).isMine {
 					cell.adjacentMines++
 				}
 			}
