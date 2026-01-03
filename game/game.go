@@ -137,7 +137,7 @@ func (g *Game) Save() *Snapshot {
 		RevealedLocations:         g.collectLocationsForSnapshot(isCellRevealed),
 		UncollectedHeartLocations: g.collectLocationsForSnapshot(isCellHeart),
 		FlaggedLocations:          g.collectLocationsForSnapshot(isCellFlagged),
-		QuestionedLocations:       g.collectLocationsForSnapshot(isCellHeart),
+		QuestionedLocations:       g.collectLocationsForSnapshot(isCellQuestioned),
 	}
 }
 
@@ -168,8 +168,8 @@ func (g *Game) Cell(x, y int) *Cell {
 		return &g.cells[i]
 	}
 
-	// Having out-of-bounds representation prevents crashes as well as stops recursive reveals from propagating.
-	return &Cell{isRevealed: true}
+	// We should never end up here, but if we do, returning non-empty fake cell would prevent a crash.
+	return &Cell{}
 }
 
 // IsFinished indicates if the game is one of the finished states.
@@ -272,8 +272,79 @@ func (g *Game) Reveal(x, y int) RevealResult {
 	return g.revealInner(x, y)
 }
 
+// AdvancedReveal reveals adjacent cells after exact amount of them were flagged.
+func (g *Game) AdvancedReveal(x, y int) RevealResult {
+	g.Lock()
+	defer g.Unlock()
+
+	cell := g.Cell(x, y)
+
+	// Only allow revealed numbered cells
+	if !cell.isRevealed || cell.adjacentMines == 0 {
+		return RevealResultBlocked
+	}
+
+	// Proceed only if adjacent flags match the cell number
+	adjacentFlaggedPoints := make([]Point, 0, 8)
+	for _, point := range g.adjacentPoints(x, y) {
+		if g.Cell(point.x, point.y).isFlagged {
+			adjacentFlaggedPoints = append(adjacentFlaggedPoints, point)
+		}
+	}
+	if len(adjacentFlaggedPoints) != cell.adjacentMines {
+		return RevealResultBlocked
+	}
+
+	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
+	// If any were revealed - combined result would be at least revealed, if any blasted - blast
+	result := RevealResultBlocked
+	for _, point := range g.adjacentPoints(x, y) {
+		subResult := g.revealInner(point.x, point.y)
+		if subResult > result {
+			result = subResult
+		}
+	}
+
+	// Blast means the adjacent flags were incorrect, remove them for safety
+	if result == RevealResultBlast {
+		for _, point := range adjacentFlaggedPoints {
+			g.Cell(point.x, point.y).isFlagged = false
+			g.flaggedCounter--
+
+			// Check if we may reveal formerly flagged location
+			for _, deepPoint := range g.adjacentPoints(point.x, point.y) {
+				deepCell := g.Cell(deepPoint.x, deepPoint.y)
+				if deepCell.isRevealed && deepCell.adjacentMines == 0 {
+					// Any adjacent revealed isolated cell indicates the formerly flag location can be revealed too
+					g.revealInner(point.x, point.y)
+					break
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+// Returns list of adjacent points, includes only in-bound ones.
+func (g *Game) adjacentPoints(x, y int) []Point {
+	points := make([]Point, 0, 8)
+	for _, offset := range adjacentOffsets {
+		px := x + offset.x
+		py := y + offset.y
+		if !g.IsOutOfBounds(px, py) {
+			points = append(points, Point{px, py})
+		}
+	}
+	return points
+}
+
 // Inner implementation of Reveal, extracted to avoid locking twice on recursion.
 func (g *Game) revealInner(x, y int) RevealResult {
+	if g.IsFinished() {
+		return RevealResultBlocked
+	}
+
 	cell := g.Cell(x, y)
 
 	// Only allow unrevealed and unmarked cells
@@ -298,11 +369,21 @@ func (g *Game) revealInner(x, y int) RevealResult {
 		g.livesLeft--
 
 		if g.livesLeft > 0 {
-			// Some lives left, remove the mine and adjust neighboring cell numbers
+			// Some lives left, remove the mine
 			cell.isMine = false
 			g.minesLeft--
-			for _, offset := range adjacentOffsets {
-				g.Cell(x+offset.x, y+offset.y).adjacentMines--
+
+			// Adjust neighboring cell numbers
+			for _, point := range g.adjacentPoints(x, y) {
+				g.Cell(point.x, point.y).adjacentMines--
+			}
+
+			// After blast an adjacent cell might become eligible for propagation
+			for _, point := range g.adjacentPoints(x, y) {
+				adjacentCell := g.Cell(point.x, point.y)
+				if adjacentCell.isRevealed && adjacentCell.adjacentMines == 0 {
+					g.propagateReveal(point.x, point.y)
+				}
 			}
 		} else {
 			// No lives left, declare loss
@@ -310,18 +391,9 @@ func (g *Game) revealInner(x, y int) RevealResult {
 		}
 	}
 
+	// Propagate reveal
 	if cell.adjacentMines == 0 {
-		// When all adjacent cells are free of mines - reveal them all
-		for _, offset := range adjacentOffsets {
-			g.revealInner(x+offset.x, y+offset.y)
-		}
-
-		// Check if it is time to spawn a heart
-		g.heartSpawnCounter++
-		if g.heartsLeft > 0 && g.heartSpawnCounter%g.heartSpawnThreshold == 0 {
-			cell.isHeart = true
-			g.heartsLeft--
-		}
+		g.propagateReveal(x, y)
 	}
 
 	// We are still alive and only mines are left unrevealed, declare victory
@@ -332,51 +404,21 @@ func (g *Game) revealInner(x, y int) RevealResult {
 	return result
 }
 
-// AdvancedReveal reveals adjacent cells after exact amount of them were flagged.
-func (g *Game) AdvancedReveal(x, y int) RevealResult {
-	g.Lock()
-	defer g.Unlock()
-
+// Reveals adjacent cells, center of propagation itself must be revealed and isolated.
+// This function is called once as soon as both conditions are met.
+func (g *Game) propagateReveal(x, y int) {
 	cell := g.Cell(x, y)
 
-	// Only allow revealed numbered cells
-	if !cell.isRevealed || cell.adjacentMines == 0 {
-		return RevealResultBlocked
+	// Process heart spawning here, as revealed isolated cells are all candidates for having a pickup
+	g.heartSpawnCounter++
+	if g.heartsLeft > 0 && g.heartSpawnCounter%g.heartSpawnThreshold == 0 {
+		cell.isHeart = true
+		g.heartsLeft--
 	}
 
-	// Proceed only if adjacent flags match the cell number
-	adjacentFlags := 0
-	for _, offset := range adjacentOffsets {
-		if g.Cell(x+offset.x, y+offset.y).isFlagged {
-			adjacentFlags++
-		}
+	for _, point := range g.adjacentPoints(x, y) {
+		g.revealInner(point.x, point.y)
 	}
-	if adjacentFlags != cell.adjacentMines {
-		return RevealResultBlocked
-	}
-
-	// Result types are ordered Blocked-Revealed-Blast, so treat the maximum as the combined result
-	// If any were revealed - combined result would be at least revealed, if any blasted - blast
-	result := RevealResultBlocked
-	for _, offset := range adjacentOffsets {
-		subResult := g.revealInner(x+offset.x, y+offset.y)
-		if subResult > result {
-			result = subResult
-		}
-	}
-
-	// Blast means the adjacent flags were incorrect, remove them for safety
-	if result == RevealResultBlast {
-		for _, offset := range adjacentOffsets {
-			adjacentCell := g.Cell(x+offset.x, y+offset.y)
-			if adjacentCell.isFlagged {
-				adjacentCell.isFlagged = false
-				g.flaggedCounter--
-			}
-		}
-	}
-
-	return result
 }
 
 // Collects list of indices of cells matching specified predicate.
@@ -429,8 +471,8 @@ func (g *Game) plantMines(mineLocations []int) {
 		for y := 0; y < g.height; y++ {
 			cell := g.Cell(x, y)
 			cell.adjacentMines = 0
-			for _, offset := range adjacentOffsets {
-				if g.Cell(x+offset.x, y+offset.y).isMine {
+			for _, point := range g.adjacentPoints(x, y) {
+				if g.Cell(point.x, point.y).isMine {
 					cell.adjacentMines++
 				}
 			}

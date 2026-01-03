@@ -55,11 +55,7 @@ func (g *Game) toNumbersMap() []string {
 		line := make([]rune, g.width)
 		for x := 0; x < g.width; x++ {
 			adjacentMines := g.Cell(x, y).adjacentMines
-			if adjacentMines > 0 {
-				line[x] = '0' + rune(adjacentMines)
-			} else {
-				line[x] = '-'
-			}
+			line[x] = '0' + rune(adjacentMines)
 		}
 		result[y] = string(line)
 	}

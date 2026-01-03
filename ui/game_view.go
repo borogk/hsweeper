@@ -10,6 +10,7 @@ import (
 )
 
 type (
+	// Effect represents visual effects, which are temporary game cell style overrides.
 	Effect struct {
 		x       int
 		y       int
@@ -17,6 +18,7 @@ type (
 		expired bool
 	}
 
+	// GameView is responsible for gameplay input and graphics.
 	GameView struct {
 		ui           *Ui
 		gameFactory  GameFactory
@@ -46,7 +48,52 @@ func (v *GameView) OnActivate() {
 }
 
 func (v *GameView) OnDeactivate() {
+	// Finalizing here makes sure the game is instantly saved on exit
 	v.autoSaver.Finalize()
+}
+
+func (v *GameView) OnInput(key tcell.Key, rune rune) {
+	gameActionDone := false
+
+	switch key {
+	case tcell.KeyLeft:
+		v.moveCursor(-1, 0)
+	case tcell.KeyRight:
+		v.moveCursor(1, 0)
+	case tcell.KeyUp:
+		v.moveCursor(0, -1)
+	case tcell.KeyDown:
+		v.moveCursor(0, 1)
+	case tcell.KeyEnter:
+		gameActionDone = v.actionButton()
+	case tcell.KeyEscape:
+		v.ui.popView()
+	case tcell.KeyDelete, tcell.KeyBackspace:
+		v.game.ClearFlagAndQuestion(v.cx, v.cy)
+		gameActionDone = true
+	default:
+		switch rune {
+		case ' ':
+			gameActionDone = v.actionButton()
+		case 'r':
+			revealResult := v.game.Reveal(v.cx, v.cy)
+			gameActionDone = true
+			if revealResult == game.RevealResultBlast {
+				v.startBlastFlashEffect()
+			}
+		case 'f':
+			v.game.ToggleFlag(v.cx, v.cy)
+			gameActionDone = true
+		case 'q':
+			v.game.ToggleQuestion(v.cx, v.cy)
+			gameActionDone = true
+		}
+	}
+
+	// Instruct auto-saver to update the save file only after the game advances.
+	if gameActionDone {
+		v.autoSaver.DeferSave()
+	}
 }
 
 func (v *GameView) ContentSize() (width, height int) {
@@ -61,6 +108,7 @@ func (v *GameView) Draw(screen tcell.Screen) {
 	offsetX := (screenWidth - contentWidth) / 2
 	offsetY := (screenHeight - contentHeight) / 2
 
+	// Status message on top of the game field
 	statusMessage, statusStyle, statusCentered := v.statusAppearance(palette)
 	statusX := offsetX + 1
 	statusY := offsetY + 1
@@ -70,6 +118,7 @@ func (v *GameView) Draw(screen tcell.Screen) {
 	screen.PutStrStyled(0, statusY, fmt.Sprintf("%*s", screenWidth, ""), palette.Blank)
 	screen.PutStrStyled(statusX, statusY, statusMessage, statusStyle)
 
+	// Game field border
 	borderLeft := offsetX
 	borderRight := borderLeft + v.game.Width()*3 + 1
 	borderTop := statusY + 1
@@ -93,6 +142,7 @@ func (v *GameView) Draw(screen tcell.Screen) {
 		screen.PutStrStyled(cellX, cellY, symbol, style)
 	}
 
+	// Game cells
 	for x := 0; x < v.game.Width(); x++ {
 		for y := 0; y < v.game.Height(); y++ {
 			symbol, style := v.cellAppearance(x, y, palette)
@@ -100,9 +150,8 @@ func (v *GameView) Draw(screen tcell.Screen) {
 		}
 	}
 
+	// Display effects and remove any that have expired
 	v.effectsMutex.Lock()
-	defer v.effectsMutex.Unlock()
-
 	validEffects := make([]*Effect, 0)
 	for _, effect := range v.effects {
 		if !effect.expired {
@@ -112,53 +161,10 @@ func (v *GameView) Draw(screen tcell.Screen) {
 		}
 	}
 	v.effects = validEffects
+	v.effectsMutex.Unlock()
 }
 
-func (v *GameView) OnInput(key tcell.Key, rune rune) {
-	gameActionDone := false
-
-	switch key {
-	case tcell.KeyLeft:
-		v.moveCursor(-1, 0)
-	case tcell.KeyRight:
-		v.moveCursor(1, 0)
-	case tcell.KeyUp:
-		v.moveCursor(0, -1)
-	case tcell.KeyDown:
-		v.moveCursor(0, 1)
-	case tcell.KeyEnter:
-		v.actionButton()
-		gameActionDone = true
-	case tcell.KeyEscape:
-		v.ui.popView()
-	case tcell.KeyDelete, tcell.KeyBackspace:
-		v.game.ClearFlagAndQuestion(v.cx, v.cy)
-		gameActionDone = true
-	default:
-		switch rune {
-		case ' ':
-			v.actionButton()
-			gameActionDone = true
-		case 'r':
-			revealResult := v.game.Reveal(v.cx, v.cy)
-			gameActionDone = true
-			if revealResult == game.RevealResultBlast {
-				v.startBlastFlashEffect()
-			}
-		case 'f':
-			v.game.ToggleFlag(v.cx, v.cy)
-			gameActionDone = true
-		case 'q':
-			v.game.ToggleQuestion(v.cx, v.cy)
-			gameActionDone = true
-		}
-	}
-
-	if gameActionDone {
-		v.autoSaver.DeferSave()
-	}
-}
-
+// Tries to start a new game from gameFactory. Exits the game view if the factory returns nil.
 func (v *GameView) startGame() {
 	g := v.gameFactory()
 	if g != nil {
@@ -251,13 +257,16 @@ func (v *GameView) moveCursor(dx, dy int) {
 	}
 }
 
-func (v *GameView) actionButton() {
+// Processes context-sensitive action button, returns true if the action resulted in the game advancing.
+func (v *GameView) actionButton() bool {
 	cell := v.game.Cell(v.cx, v.cy)
 	if v.game.Status() == game.StatusReady {
 		v.game.Reveal(v.cx, v.cy)
+		return true
 	} else if v.game.Status() == game.StatusStarted {
 		if !cell.IsRevealed() {
 			v.game.ToggleFlag(v.cx, v.cy)
+			return true
 		} else if cell.AdjacentMines() > 0 {
 			revealResult := v.game.AdvancedReveal(v.cx, v.cy)
 			if revealResult != game.RevealResultBlast {
@@ -265,12 +274,16 @@ func (v *GameView) actionButton() {
 			} else {
 				v.startBlastFlashEffect()
 			}
+			return true
 		} else if cell.IsHeart() {
 			v.game.Pickup(v.cx, v.cy)
+			return true
 		}
 	} else {
 		v.startGame()
 	}
+
+	return false
 }
 
 func (v *GameView) startRevealFlashEffect() {
