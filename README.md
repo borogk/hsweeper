@@ -11,9 +11,9 @@ _H-Sweeper_ is a Minesweeper clone with extra lives feature, that runs entirely 
 
 | File name                                                                                                                                               | Platform    |
 |---------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
-| [hsweeper-v1.0.0-beta.5-windows-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.5/hsweeper-v1.0.0-beta.5-windows-amd64.zip) | Windows x64 |
-| [hsweeper-v1.0.0-beta.5-linux-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.5/hsweeper-v1.0.0-beta.5-linux-amd64.zip)     | Linux x64   |
-| [hsweeper-v1.0.0-beta.5-macos-arm64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.5/hsweeper-v1.0.0-beta.5-macos-arm64.zip)     | macOS ARM64 |
+| [hsweeper-v1.0.0-beta.6-windows-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.6/hsweeper-v1.0.0-beta.6-windows-amd64.zip) | Windows x64 |
+| [hsweeper-v1.0.0-beta.6-linux-amd64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.6/hsweeper-v1.0.0-beta.6-linux-amd64.zip)     | Linux x64   |
+| [hsweeper-v1.0.0-beta.6-macos-arm64.zip](https://github.com/borogk/hsweeper/releases/download/v1.0.0-beta.6/hsweeper-v1.0.0-beta.6-macos-arm64.zip)     | macOS ARM64 |
 
 ### How to install from source code
 
@@ -23,7 +23,7 @@ _H-Sweeper_ is a Minesweeper clone with extra lives feature, that runs entirely 
 Simply run the following command, it automatically fetches the sources and builds locally:
 
 ```shell
-go install github.com/borogk/hsweeper@v1.0.0-beta.5
+go install github.com/borogk/hsweeper@v1.0.0-beta.6
 ```
 
 Alternatively, clone the repo and build directly from the project directory:
@@ -117,6 +117,7 @@ The game is minimalistic, made with personal tastes in mind and with little to n
 ### Author
 
 Originally created by **borogk** in 2025.
+
 
 
 
