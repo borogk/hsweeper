@@ -6,12 +6,12 @@ import (
 )
 
 // Palette defines colors for all graphics elements in the game.
+// ANSI 256-color palette is used for better terminal compatibility.
 type Palette struct {
 	Blank                 tcell.Style
 	PlainText             tcell.Style
 	Logo                  tcell.Style
 	LogoSecondary         tcell.Style
-	DefaultGameText       tcell.Style
 	ExpertGameText        tcell.Style
 	BigGameText           tcell.Style
 	ClassicGameText       tcell.Style
@@ -34,75 +34,88 @@ type Palette struct {
 	Numbers               []tcell.Style
 }
 
-const blankColor = 0x0C0C0C
-
-func rgb(color uint64) tcell.Color {
-	return tcell.ColorIsRGB | tcell.ColorValid | tcell.Color(color)
-}
-
-func style(foreground uint64) tcell.Style {
-	return styleWithBackground(foreground, blankColor)
-}
-
-func styleWithBackground(foreground, background uint64) tcell.Style {
-	return tcell.StyleDefault.Foreground(rgb(foreground)).Background(rgb(background))
-}
-
 var defaultPalette = Palette{
-	Blank:                 style(blankColor),
-	PlainText:             style(0xFFFFFF),
-	Logo:                  styleWithBackground(blankColor, 0xCC1C45),
-	LogoSecondary:         styleWithBackground(blankColor, 0x274FBC),
-	DefaultGameText:       style(0x90EE90),
-	ExpertGameText:        style(0xFFFF00),
-	BigGameText:           style(0xFFA000),
-	ClassicGameText:       style(0xB0B0FF),
-	ExitText:              style(0xB3B3B3),
-	Border:                style(0x352D66),
-	ReadyText:             style(0xD3D3D3),
-	StatusText:            style(0xFF0000),
-	LoseText:              style(0xFF0000),
-	WinText:               style(0x90EE90),
-	Cursor:                styleWithBackground(0x000000, 0x9ACD32),
-	Unrevealed:            styleWithBackground(0x352D66, 0x201B3D),
-	Flag:                  style(0xFFA500),
-	Question:              style(0xFFFFFF),
-	Heart:                 style(0xFF0000),
-	RevealedMine:          styleWithBackground(0x000000, 0xFF0000),
-	UnrevealedMine:        style(0xFF0000),
-	RevealUnrevealedFlash: styleWithBackground(0xFFFF00, 0x201B3D),
-	RevealFlagFlash:       style(0xFFFF00),
-	BlastFlash:            styleWithBackground(0x000000, 0xFF0000),
+	Blank:                 style(),
+	PlainText:             style(255),
+	Logo:                  style(232, 160),
+	LogoSecondary:         style(232, 26),
+	ExpertGameText:        style(226),
+	BigGameText:           style(84),
+	ClassicGameText:       style(50),
+	ExitText:              style(255),
+	Border:                style(236),
+	ReadyText:             style(255),
+	StatusText:            style(196),
+	LoseText:              style(196),
+	WinText:               style(40),
+	Cursor:                style(232, 84),
+	Unrevealed:            style(236, 234),
+	Flag:                  style(220, 234),
+	Question:              style(255, 234),
+	Heart:                 style(196),
+	RevealedMine:          style(232, 196),
+	UnrevealedMine:        style(196),
+	RevealUnrevealedFlash: style(226, 234),
+	RevealFlagFlash:       style(231, 234),
+	BlastFlash:            style(232, 196),
 	Numbers: []tcell.Style{
-		style(0x000000),
-		style(0x0080FF),
-		style(0x90EE90),
-		style(0xFF0000),
-		style(0xEE82EE),
-		style(0xA52A2A),
-		style(0x008B8B),
-		style(0x8A2BE2),
-		style(0x808080),
+		style(232),
+		style(33),
+		style(84),
+		style(196),
+		style(213),
+		style(88),
+		style(27),
+		style(92),
+		style(244),
 	},
 }
 
-// Returns default palette with modifications depending on game status.
+var lostPalette = defaultPalette
+var wonPalette = defaultPalette
+
+func init() {
+	lostPalette.Border = style(52)
+	lostPalette.Flag = style(196)
+	lostPalette.Question = style(196)
+	lostPalette.Unrevealed = style(52)
+	lostPalette.UnrevealedMine = style(196)
+	lostPalette.Numbers = []tcell.Style{style(52)}
+
+	wonPalette.Border = style(22)
+	wonPalette.Flag = style(84)
+	wonPalette.Question = style(84)
+	wonPalette.UnrevealedMine = style(84)
+	wonPalette.Numbers = []tcell.Style{style(22)}
+	wonPalette.RevealUnrevealedFlash = style(22)
+	wonPalette.RevealFlagFlash = style(84)
+	wonPalette.BlastFlash = style(232, 84)
+}
+
+// Returns palette fitting for current game status.
 func gamePalette(g *game.Game) Palette {
-	palette := defaultPalette
 	if g.Status() == game.StatusLost {
-		palette.Border = style(0x480000)
-		palette.Flag = style(0xFF0000)
-		palette.Question = style(0xFF0000)
-		palette.Unrevealed = style(0x480000)
-		palette.UnrevealedMine = style(0xFF0000)
-		palette.Numbers = []tcell.Style{style(0x480000)}
+		return lostPalette
 	} else if g.Status() == game.StatusWon {
-		palette.Border = style(0x006400)
-		palette.Flag = style(0x90EE90)
-		palette.Question = style(0x90EE90)
-		palette.UnrevealedMine = style(0x90EE90)
-		palette.Numbers = []tcell.Style{style(0x006400)}
+		return wonPalette
 	}
 
-	return palette
+	return defaultPalette
+}
+
+func style(colors ...byte) tcell.Style {
+	foreground := byte(232)
+	background := byte(232)
+	if len(colors) > 0 {
+		foreground = colors[0]
+	}
+	if len(colors) > 1 {
+		background = colors[1]
+	}
+
+	return tcell.StyleDefault.Foreground(ansiColor(foreground)).Background(ansiColor(background))
+}
+
+func ansiColor(color byte) tcell.Color {
+	return tcell.ColorValid | tcell.Color(color)
 }
