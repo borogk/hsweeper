@@ -2,7 +2,7 @@
 
 _H-Sweeper_ is a Minesweeper clone with extra lives feature, that runs entirely in terminal.
 
-![](img/sample.png)
+![](img/gameplay.gif)
 
 ### Downloads
 
